@@ -313,15 +313,15 @@
 
                 connectToPeer(targetId) {
                     if (!this.peer || this.peer.destroyed) return null;
-                    const conn = this.peer.connect(targetId, {
-                        metadata: { name: this.name, protocol: 'delta' },
-                        reliable: true,
-                        serialization: 'json'
-                    });
+
+                    // Simplifies connection execution loops to protect Chromebook sandboxes
+                    const conn = this.peer.connect(targetId);
+
                     this.dataConnections.set(targetId, conn);
                     this.bindConnectionChannels(conn);
                     return conn;
                 }
+
 
                 broadcast(message) {
                     const packet = { opcode: 'G_MSG', origin: this.name, ttl: 1, target: '*', payload: message };
@@ -940,7 +940,7 @@
             const myLobbyCode = window.cldelta.name;
 
             isLobbyHost = true;
-            currentparty= myLobbyCode; // Assigns your global game variable context
+            currentparty = myLobbyCode; // Assigns your global game variable context
 
             // Update the layout view
             txtRoomCode.innerText = myLobbyCode;
