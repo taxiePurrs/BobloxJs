@@ -178,6 +178,11 @@
                 MouseHover = ID
             }
         }
+        function circularMouseHitbox(X, Y, Radius, ID) {
+            if (Math.hypot(X - mousex, y - mousey) <= Radius) {
+                MouseHover = ID
+            }
+        }
 
         function drawText(Text, X, Y, Size, Font, Color, Alignment) {
             ctx.fillStyle = Color;
@@ -446,14 +451,21 @@
 
         //click detection
         canvas.addEventListener("click", (event) => {
+            if (!MouseHover) {
+                EscapeMenuOpen = false
+            }
             if (MouseHover == "Logo") {
                 window.open("https://github.com/taxiePurrs/BobloxJs", '_blank').focus();
             } else if (MouseHover == "Tycoonicon") {
                 Currentgame = 1
+            } else if (MouseHover == "OpenEscape") {
+                EscapeMenuOpen = !EscapeMenuOpen
             }
         })
 
         //initialize variables for game loop
+        let EscapeMenuOpen = false
+        let escapemenuY = 1920
         let Currentgame = 0
         let prevgame = 0
         let animationClock = 0
@@ -482,6 +494,9 @@
             let leftrightbias = 0
 
             animationClock = Math.max(animationClock-dt*((characterState == "Walking") ? (speed/50) : 1), 0)
+
+            escapemenuY += dt*2000*(EscapeMenuOpen ? 1 : -1) 
+            escapemenuY = clamp(escapemenuY, 240, 1920)
 
             //clear the canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -578,14 +593,30 @@
             drawCharacter(PlrX, PlrY, Size, getAnimationFrame(), facingleft)
 
             if (Currentgame == 0){
+                EscapeMenuOpen = false
+                escapemenuY = 1920
+                //draw the overlaid boblox javascript edition logo
                 ctx.drawImage(NotInGameOverlay, 0, 0)
-                mouseHitbox(10, 10, 315, 94, "Logo")
+                mouseHitbox(10, 10, 315, 94, "Logo") //clickbox redirects to github repo
+
+                //draw games on home menu
+                if (menu == 0) {
+                    ctx.drawImage(tycoonico, 235, 120, 240, 240)
+                    mouseHitbox(235, 120, 240, 240, "Tycoonicon")
+                }
+            } else {
+                //draw the escape menu
+                if (escapemenuY < 1920) {
+                    drawRoundedRectangle((canvas.width-720)/2, escapemenuY, 720, 600, 100, "#0009")
+                    mouseHitbox((canvas.width-720)/2, escapemenuY, 720, 600, "EscapeBackground")
+                }
+                //draw the Boblox escape menu button
+                ctx.drawRoundedRectangle(10, 10, 50, 50, 25, "#0009")
+                circularMouseHitbox(30, 30, 25, "OpenEscape")
+
             }
-            //drawGamesOnHomeMenu
-            if (menu == 0) {
-                ctx.drawImage(tycoonico, 235, 120, 240, 240)
-                mouseHitbox(235, 120, 240, 240, "Tycoonicon")
-            }
+            
+            
 
             //draw the cursor
             drawCursor((MouseHover != null), mouseOnScreen)
@@ -594,7 +625,7 @@
                 drawText(
                     Math.round(1 / dt) + " FPS",
                     0,
-                    20,
+                    1060,
                     40,
                     "Arial",
                     "#fff"
