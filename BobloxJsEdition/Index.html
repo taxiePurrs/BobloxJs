@@ -36,32 +36,54 @@
     <script>
         (function () {
             const screenConsole = document.getElementById('game-console');
-
-            // Backup the original console functions just in case
             const originalLog = console.log;
             const originalWarn = console.warn;
+            const originalError = console.error;
 
-            function printToScreen(message, color = "#4CAF50") {
-                if (screenConsole) {
-                    const cleanMessage = message.replace(/%c/g, ''); // Remove color flags
+            function safePrintToScreen(messageArray, color = "#4CAF50") {
+                // This acts as a Lua "pcall" - protecting your entire game thread
+                try {
+                    if (!screenConsole) return;
+
+                    // Convert arguments to safe strings. 
+                    // If someone passes a circular object or an invalid variable, this prevents a crash.
+                    let parsedMessage = messageArray.map(arg => {
+                        if (typeof arg === 'object' && arg !== null) {
+                            try {
+                                return JSON.stringify(arg); // Convert object to text safely
+                            } catch (e) {
+                                return "[Unprintable Complex Object]";
+                            }
+                        }
+                        return String(arg); // Convert numbers/strings safely
+                    }).join(' ');
+
+                    // Remove formatting flags so they don't break the HTML layout
+                    const cleanMessage = parsedMessage.replace(/%c/g, '');
+
+                    // Safely update the HTML
                     screenConsole.innerHTML += `<div style="color: ${color}">> ${cleanMessage}</div>`;
-                    screenConsole.scrollTop = screenConsole.scrollHeight; // Auto-scroll to bottom
+                    screenConsole.scrollTop = screenConsole.scrollHeight; // Keep scrolled to bottom
+                } catch (fatalConsoleError) {
+                    // If the screen logger itself breaks, do absolutely nothing.
+                    // This prevents a logger error from ever crashing your actual game loop.
                 }
             }
 
-            // Overwrite the console to print on the screen
+            // Overwrite the console channels with protected wrappers
             console.log = function (...args) {
-                originalLog.apply(console, args);
-                printToScreen(args.join(' '), "#4CAF50");
+                originalLog.apply(console, args); // Still print to real hidden console
+                safePrintToScreen(args, "#4CAF50");
             };
 
             console.warn = function (...args) {
                 originalWarn.apply(console, args);
-                printToScreen(args.join(' '), "#FF9800");
+                safePrintToScreen(args, "#FF9800");
             };
 
             console.error = function (...args) {
-                printToScreen(args.join(' '), "#FF5252");
+                originalError.apply(console, args);
+                safePrintToScreen(args, "#FF5252");
             };
         })();
 
