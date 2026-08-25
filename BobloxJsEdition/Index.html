@@ -101,7 +101,7 @@
             // 3. Dynamic Injection Sandbox — Safely fetches structural files without rendering freezes
             if (navigator.onLine !== false) {
                 const cdnScript = document.createElement('script');
-                cdnScript.src = "https://jsdelivr.net"; // Fixed target path
+                cdnScript.src = "https://unpkg.com";
 
                 cdnScript.onerror = function () {
                     console.warn("[Engine Network Link] CDN unreachable. Maintaining single-player local environment.");
