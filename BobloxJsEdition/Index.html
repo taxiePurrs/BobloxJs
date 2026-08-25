@@ -64,9 +64,15 @@
         window.addEventListener("keydown", (event) => keysdown.add(event.key));
         window.addEventListener("keyup", (event) => keysdown.delete(event.key));
 
+        function loadImage (Image, TextureName) {
+            Image.src = (typeof IMAGES !== 'undefined' && IMAGES[TextureName]) ? IMAGES[TextureName] : `./Textures/${TextureName}`;
+        }
+
         const cursor = new Image(), cursorHov = new Image()
-        cursor.src = "./Textures/White.png"
-        cursorHov.src = "./Textures/Black.png"
+        loadImage(cursor, "White.png")
+        loadImage(cursorHov, "Black.png")
+        //cursor.src = "./Textures/White.png"
+        //cursorHov.src = "./Textures/Black.png"
 
         function drawCursor(isHovering, draw) {
             if (!draw) { return } //skip drawing if draw is false
@@ -206,11 +212,13 @@
         }
 
         let NotInGameOverlay = new Image()
-        NotInGameOverlay.src = "./Textures/Overlay.png"
+        loadImage(NotInGameOverlay, "Overlay.png")
+        //NotInGameOverlay.src = "./Textures/Overlay.png"
 
 
         let faceSideHappy = new Image()
-        faceSideHappy.src = "./Textures/FaceSideHappy.png"
+        loadImage(NotInGameOverlay, "FaceSideHappy.png")
+        //faceSideHappy.src = "./Textures/FaceSideHappy.png"
 
         const faces = {
             HappySide: faceSideHappy
