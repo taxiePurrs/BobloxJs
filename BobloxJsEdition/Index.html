@@ -898,6 +898,7 @@
 
         let escapemenuY = 1920
         let Currentgame = 0
+        let currentparty = 0
         let prevgame = 0
         let animationClock = 0
         let facingleft = false
@@ -938,7 +939,7 @@
             const myLobbyCode = window.cldelta.name;
 
             isLobbyHost = true;
-            Currentgame = myLobbyCode; // Assigns your global game variable context
+            currentparty= myLobbyCode; // Assigns your global game variable context
 
             // Update the layout view
             txtRoomCode.innerText = myLobbyCode;
@@ -965,7 +966,7 @@
 
             // Direct P2P tunnel initialization request via CloudLink API layers
             isLobbyHost = false;
-            Currentgame = targetCode; // Sync your game room variable context to their room ID
+            currentparty = targetCode; // Sync your game room variable context to their room ID
 
             window.cldelta.connectToPeer(targetCode);
         };
