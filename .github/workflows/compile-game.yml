@@ -1,28 +1,40 @@
-name: Compile BobloxJs Single File Game
+name: Compile and Deploy BobloxJs Single File Game
 
 on:
   push:
     branches:
-      - main # Change this to 'master' if your default branch is named master
+      - main # Change this to 'master' if your default branch name is master
+
+# Grant permissions needed to publish to GitHub Pages
+permissions:
+  pages: write
+  id-token: write
+
+# Prevent concurrent deployments from clashing
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Download your repository files onto the GitHub server
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # 2. Give the build script permission to run and execute it
     - name: Compile HTML and PNGs
       run: |
         chmod +x build.sh
         ./build.sh
 
-    # 3. Package the final single-file game so you can download it
-    - name: Upload Single File Game Artifact
-      uses: actions/upload-artifact@v4
+    # 1. Prepare the dist folder as a web server artifact
+    - name: Upload Static Webpage Artifact
+      uses: actions/upload-pages-artifact@v3
       with:
-        name: bobloxjs-offline-game
-        path: dist/index.html
+        path: 'dist/' # Points strictly to the folder containing your compiled index.html
+
+    # 2. Push the artifact straight to your live github.io page
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
