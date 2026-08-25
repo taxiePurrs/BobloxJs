@@ -224,6 +224,7 @@
             HappySide: faceSideHappy
         }
 
+        //all of the animation data
         let animationFrames = {
             Idle: [
                 {
@@ -443,10 +444,12 @@
             }
         }
 
-        
+        //click detection
         canvas.addEventListener("click", (event) => {
             if (MouseHover == "Logo") {
                 window.open("https://github.com/taxiePurrs/BobloxJs", '_blank').focus();
+            } else if (MouseHover == "Tycoonicon") {
+                Currentgame = 1
             }
         })
 
@@ -462,8 +465,13 @@
         let speed = 150
         let Size = 2.5
         let jumppower = 1000
+        let menu = 0
 
         const walkanimspeed = 6
+
+        //some HomeMenu Textures and assets
+        let tycoonico = new Image()
+        loadImage(tycoonico, "TycoonIcon.png")
 
         function gameLoop(currentTime) {
             let dt = (currentTime - lastTime) / 1000;
@@ -483,7 +491,7 @@
 
 
             if (Currentgame == 0) {
-                PlrX = 240
+                PlrX = 123
                 PlrY = 480
                 Size = 3
                 facingleft = false
@@ -569,9 +577,15 @@
             //Draw the character
             drawCharacter(PlrX, PlrY, Size, getAnimationFrame(), facingleft)
 
-            ctx.drawImage(NotInGameOverlay, 0, 0)
-            mouseHitbox(10, 10, 315, 94, "Logo")
-            
+            if (Currentgame == 0){
+                ctx.drawImage(NotInGameOverlay, 0, 0)
+                mouseHitbox(10, 10, 315, 94, "Logo")
+            }
+            //drawGamesOnHomeMenu
+            if (menu == 0) {
+                ctx.drawImage(tycoonico, 235, 120, 240, 240)
+                mouseHitbox(235, 120, 240, 240, "Tycoonicon")
+            }
 
             //draw the cursor
             drawCursor((MouseHover != null), mouseOnScreen)
