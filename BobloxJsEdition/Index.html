@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <head>
-    <title>boblox</title>
+    <title>BOBLOX: JAVASCRIPT EDITION</title>
 </head>
 
 <body>
@@ -450,7 +450,7 @@
         }
 
         let EscapeMenuOpen = false
-        
+
         //click detection
         canvas.addEventListener("click", (event) => {
             if (!MouseHover) {
@@ -607,15 +607,18 @@
                     mouseHitbox(235, 120, 240, 240, "Tycoonicon")
                 }
             } else {
+                //draw the Boblox escape menu button
+                ctx.drawRoundedRectangle(10, 10, 50, 50, 25, "#000")
+                circularMouseHitbox(30, 30, 25, "OpenEscape")
                 //draw the escape menu
                 if (escapemenuY < 1920) {
-                    drawRoundedRectangle((canvas.width-720)/2, escapemenuY, 720, 600, 100, "#0009")
-                    mouseHitbox((canvas.width-720)/2, escapemenuY, 720, 600, "EscapeBackground")
+                    drawRoundedRectangle((canvas.width-720)/2, escapemenuY, 720, 600, 100, "#000")
+                    if (EscapeMenuOpen) {
+                        MouseHover = null
+                        mouseHitbox((canvas.width-720)/2, escapemenuY, 720, 600, "EscapeBackground")
+                    }
+                    
                 }
-                //draw the Boblox escape menu button
-                ctx.drawRoundedRectangle(10, 10, 50, 50, 25, "#0009")
-                circularMouseHitbox(30, 30, 25, "OpenEscape")
-
             }
             
             
