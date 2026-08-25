@@ -273,7 +273,7 @@
                 scriptEl.onload = function () {
                     // Upgrade mock layer to an active online state class instantiation!
                     window.cldelta = new CloudLinkDeltaStandalone();
-                    console.log(`%c[CLΔ Core Loader] Infrastructure bound successfully via path index ${index}`, "color: #4CAF50; font-weight: bold;");
+                    console.log(`%c[CLΔ Core Loader] Infrastructure bound successfully via path index ${index}`);
                 };
 
                 scriptEl.onerror = function () {
@@ -794,6 +794,9 @@
         let jumppower = 1000
         let menu = 0
 
+        let lastNetworkTick = 0;
+        const NETWORK_TICK_RATE = 100
+
         const walkanimspeed = 6
 
         //some HomeMenu Textures and assets
@@ -965,8 +968,11 @@
                     "#fff"
                 )
             }
+            if (window.cldelta.isOnline && (currentTime - lastNetworkTick >= NETWORK_TICK_RATE)) {
 
-            if (window.cldelta.isOnline) {
+                // Ensure state is just a simple number or text name string, not a complex object
+                let currentAnimState = typeof getAnimationFrame === 'function' ? getAnimationFrame() : 0;
+
                 window.cldelta.broadcast({
                     type: "LIVEDATA",
                     x: PlrX,
@@ -975,8 +981,10 @@
                     sx: Scrollx,
                     s: Size,
                     m: facingleft,
-                    state: getAnimationFrame()
+                    state: currentAnimState
                 });
+
+                lastNetworkTick = currentTime; // Update the network clock gate timer
             }
 
             lasttime = currentTime
