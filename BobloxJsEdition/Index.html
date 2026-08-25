@@ -17,7 +17,55 @@
         background-color: black;
         cursor: none;
     "></canvas>
+    <div id="game-console" style="
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 400px;
+    height: 200px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #4CAF50;
+    font-family: monospace;
+    font-size: 14px;
+    padding: 10px;
+    overflow-y: auto;
+    pointer-events: none;
+    border: 1px solid #333;
+    z-index: 1000;
+    ">Initializing BOBLOX Screen Console...</div>
+    <script>
+        (function () {
+            const screenConsole = document.getElementById('game-console');
 
+            // Backup the original console functions just in case
+            const originalLog = console.log;
+            const originalWarn = console.warn;
+
+            function printToScreen(message, color = "#4CAF50") {
+                if (screenConsole) {
+                    const cleanMessage = message.replace(/%c/g, ''); // Remove color flags
+                    screenConsole.innerHTML += `<div style="color: ${color}">> ${cleanMessage}</div>`;
+                    screenConsole.scrollTop = screenConsole.scrollHeight; // Auto-scroll to bottom
+                }
+            }
+
+            // Overwrite the console to print on the screen
+            console.log = function (...args) {
+                originalLog.apply(console, args);
+                printToScreen(args.join(' '), "#4CAF50");
+            };
+
+            console.warn = function (...args) {
+                originalWarn.apply(console, args);
+                printToScreen(args.join(' '), "#FF9800");
+            };
+
+            console.error = function (...args) {
+                printToScreen(args.join(' '), "#FF5252");
+            };
+        })();
+
+    </script>
     <script>
         (function () {
             // 1. Establish the fallback layer instantly to protect the 60fps frame loop
