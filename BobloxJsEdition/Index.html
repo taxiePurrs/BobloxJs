@@ -73,7 +73,7 @@
             class FallbackOfflineLink {
                 constructor() {
                     this.isOnline = false;
-                    console.log("%c[Engine Cloud] Initialized in Local Offline Mode.", "color: #bada55; font-weight: bold;");
+                    console.log("%c[Engine Cloud] Initialized in Local Offline Mode.");
                 }
                 broadcast() { /* Drops outbound network ticks silently when offline */ }
                 connectToPeer() { console.warn("Network unavailable. Cannot link players."); return null; }
@@ -155,7 +155,7 @@
                     this.peer.on('open', (id) => {
                         this.peerStatus = 'open';
                         this.isOnline = true;
-                        console.log(`%c[CLΔ Engine] Connected to matchmaker! Player Session ID: ${id}`, "color: #0F7EBD; font-weight: bold;");
+                        console.log(`%c[CLΔ Engine] Connected to matchmaker! Player Session ID: ${id}`);
                         if (typeof window.onEngineNetworkOpen === 'function') window.onEngineNetworkOpen(id);
                     });
 
