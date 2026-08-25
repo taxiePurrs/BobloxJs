@@ -449,6 +449,8 @@
             }
         }
 
+        let EscapeMenuOpen = false
+        
         //click detection
         canvas.addEventListener("click", (event) => {
             if (!MouseHover) {
@@ -464,7 +466,7 @@
         })
 
         //initialize variables for game loop
-        let EscapeMenuOpen = false
+        
         let escapemenuY = 1920
         let Currentgame = 0
         let prevgame = 0
