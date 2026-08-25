@@ -444,7 +444,13 @@
         }
 
         
+        canvas.addEventListener("click", (event) => {
+            if (MouseHover == "Logo") {
+                window.open("https://github.com/taxiePurrs/BobloxJs", '_blank').focus();
+            }
+        })
 
+        //initialize variables for game loop
         let Currentgame = 0
         let prevgame = 0
         let animationClock = 0
