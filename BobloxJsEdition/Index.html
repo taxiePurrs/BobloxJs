@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>BOBLOX: JAVASCRIPT EDITION</title>
 </head>
+
 <body>
     <canvas id="canvas" width="1920" height="1080" style="
         width: 100vw;
@@ -17,109 +18,106 @@
         cursor: none;
     "></canvas>
 
-<!-- ======================================================= -->
-<!-- FAIL-SAFE GAME ENGINE NETWORK LAYER                     -->
-<!-- ======================================================= -->
-<script>
-(function() {
-    // 1. Establish the fallback layer instantly to protect the 60fps frame loop
-    class FallbackOfflineLink {
-        constructor() {
-            this.isOnline = false;
-            console.log("%c[Engine Cloud] Initialized in Local Offline Mode.", "color: #bada55; font-weight: bold;");
-        }
-        broadcast() { /* Drops outbound network ticks silently when offline */ }
-        connectToPeer() { console.warn("Network unavailable. Cannot link players."); return null; }
-    }
+    <script>
+        (function () {
+            // 1. Establish the fallback layer instantly to protect the 60fps frame loop
+            class FallbackOfflineLink {
+                constructor() {
+                    this.isOnline = false;
+                    console.log("%c[Engine Cloud] Initialized in Local Offline Mode.", "color: #bada55; font-weight: bold;");
+                }
+                broadcast() { /* Drops outbound network ticks silently when offline */ }
+                connectToPeer() { console.warn("Network unavailable. Cannot link players."); return null; }
+            }
 
-    // Assign baseline safety net variable immediately
-    window.gameNetwork = new FallbackOfflineLink();
+            // Assign baseline safety net variable immediately
+            window.gameNetwork = new FallbackOfflineLink();
 
-    // 2. Real networking controller executed only if the library resolves over CDN
-    class EngineNetworkLink {
-        constructor() {
-            this.peerServerUrl = '0.peerjs.com'; // Fixed missing host address
-            this.reconnectInterval = 2000;
-            this.maxReconnectInterval = 30000;
-            this.reconnectTimeout = null;
-            this.peer = null;
-            this.connections = new Map();
-            this.isOnline = false;
-            this.isConnecting = false;
-            this.initPeer();
-        }
-        initPeer() {
-            if (this.isConnecting || navigator.onLine === false) return;
-            this.isConnecting = true;
-            try {
-                this.peer = new Peer({ 
-                    host: this.peerServerUrl, 
-                    secure: true, 
-                    port: 443,
-                    debug: 1 
-                });
-                this.attachEventHandlers();
-            } catch(e) { this.isConnecting = false; }
-        }
-        attachEventHandlers() {
-            this.peer.on('open', (id) => {
-                this.isOnline = true;
-                this.isConnecting = false;
-                console.log(`%c[Engine Cloud] Connected! Player ID: ${id}`, "color: #4CAF50; font-weight: bold;");
-            });
-            this.peer.on('disconnected', () => { this.isOnline = false; this.scheduleReconnect(); });
-            this.peer.on('error', () => { this.isOnline = false; this.scheduleReconnect(); });
-            this.peer.on('connection', (conn) => this.registerConnection(conn));
-        }
-        registerConnection(conn) {
-            conn.on('open', () => this.connections.set(conn.peer, conn));
-            conn.on('data', (data) => {
-                if (typeof window.routeIncomingGameData === 'function') window.routeIncomingGameData(data);
-            });
-            conn.on('close', () => this.connections.delete(conn.peer));
-        }
-        broadcast(packet) {
-            if (!this.isOnline) return;
-            for (const [id, conn] of this.connections) { if (conn.open) conn.send(packet); }
-        }
-        connectToPeer(targetId) {
-            if (!this.isOnline) return null;
-            const conn = this.peer.connect(targetId);
-            this.registerConnection(conn);
-            return conn;
-        }
-        scheduleReconnect() {
-            if (this.reconnectTimeout) return;
-            this.reconnectTimeout = setTimeout(() => {
-                this.reconnectTimeout = null;
-                this.isConnecting = false;
-                this.reconnectInterval = Math.min(this.reconnectInterval * 1.5, this.maxReconnectInterval);
-                if (this.peer) this.peer.destroy();
-                this.initPeer();
-            }, this.reconnectInterval);
-        }
-    }
+            // 2. Real networking controller executed only if the library resolves over CDN
+            class EngineNetworkLink {
+                constructor() {
+                    this.peerServerUrl = '0.peerjs.com'; // Fixed missing host address
+                    this.reconnectInterval = 2000;
+                    this.maxReconnectInterval = 30000;
+                    this.reconnectTimeout = null;
+                    this.peer = null;
+                    this.connections = new Map();
+                    this.isOnline = false;
+                    this.isConnecting = false;
+                    this.initPeer();
+                }
+                initPeer() {
+                    if (this.isConnecting || navigator.onLine === false) return;
+                    this.isConnecting = true;
+                    try {
+                        this.peer = new Peer({
+                            host: this.peerServerUrl,
+                            secure: true,
+                            port: 443,
+                            debug: 1
+                        });
+                        this.attachEventHandlers();
+                    } catch (e) { this.isConnecting = false; }
+                }
+                attachEventHandlers() {
+                    this.peer.on('open', (id) => {
+                        this.isOnline = true;
+                        this.isConnecting = false;
+                        console.log(`%c[Engine Cloud] Connected! Player ID: ${id}`, "color: #4CAF50; font-weight: bold;");
+                    });
+                    this.peer.on('disconnected', () => { this.isOnline = false; this.scheduleReconnect(); });
+                    this.peer.on('error', () => { this.isOnline = false; this.scheduleReconnect(); });
+                    this.peer.on('connection', (conn) => this.registerConnection(conn));
+                }
+                registerConnection(conn) {
+                    conn.on('open', () => this.connections.set(conn.peer, conn));
+                    conn.on('data', (data) => {
+                        if (typeof window.routeIncomingGameData === 'function') window.routeIncomingGameData(data);
+                    });
+                    conn.on('close', () => this.connections.delete(conn.peer));
+                }
+                broadcast(packet) {
+                    if (!this.isOnline) return;
+                    for (const [id, conn] of this.connections) { if (conn.open) conn.send(packet); }
+                }
+                connectToPeer(targetId) {
+                    if (!this.isOnline) return null;
+                    const conn = this.peer.connect(targetId);
+                    this.registerConnection(conn);
+                    return conn;
+                }
+                scheduleReconnect() {
+                    if (this.reconnectTimeout) return;
+                    this.reconnectTimeout = setTimeout(() => {
+                        this.reconnectTimeout = null;
+                        this.isConnecting = false;
+                        this.reconnectInterval = Math.min(this.reconnectInterval * 1.5, this.maxReconnectInterval);
+                        if (this.peer) this.peer.destroy();
+                        this.initPeer();
+                    }, this.reconnectInterval);
+                }
+            }
 
-    // 3. Dynamic Injection Sandbox — Safely fetches structural files without rendering freezes
-    if (navigator.onLine !== false) {
-        const cdnScript = document.createElement('script');
-        cdnScript.src = "https://jsdelivr.net"; // Fixed target path
-        
-        cdnScript.onerror = function() {
-            console.warn("[Engine Network Link] CDN unreachable. Maintaining single-player local environment.");
-        };
+            // 3. Dynamic Injection Sandbox — Safely fetches structural files without rendering freezes
+            if (navigator.onLine !== false) {
+                const cdnScript = document.createElement('script');
+                cdnScript.src = "https://jsdelivr.net"; // Fixed target path
 
-        cdnScript.onload = function() {
-            // Swap out fallback ghost layer for an active server communication pipe
-            window.gameNetwork = new EngineNetworkLink();
-        };
+                cdnScript.onerror = function () {
+                    console.warn("[Engine Network Link] CDN unreachable. Maintaining single-player local environment.");
+                };
 
-        document.head.appendChild(cdnScript);
-    } else {
-        console.log("[Engine Network Link] Network hardware offline. Remaining local.");
-    }
-})();
-</script>
+                cdnScript.onload = function () {
+                    // Swap out fallback ghost layer for an active server communication pipe
+                    window.gameNetwork = new EngineNetworkLink();
+                };
+
+                document.head.appendChild(cdnScript);
+            } else {
+                console.log("[Engine Network Link] Network hardware offline. Remaining local.");
+            }
+        })();
+    </script>
 
     <script>
         let config = { //default config
@@ -169,7 +167,7 @@
         window.addEventListener("keydown", (event) => keysdown.add(event.key));
         window.addEventListener("keyup", (event) => keysdown.delete(event.key));
 
-        function loadImage (Image, TextureName) {
+        function loadImage(Image, TextureName) {
             Image.src = (typeof IMAGES !== 'undefined' && IMAGES[TextureName]) ? IMAGES[TextureName] : `./Textures/${TextureName}`;
         }
 
@@ -279,7 +277,7 @@
         }
 
         function mouseHitbox(X, Y, Width, Height, ID) {
-            if (mousex > X && mousex < X+Width && mousey > Y && mousey < Y+Height) {
+            if (mousex > X && mousex < X + Width && mousey > Y && mousey < Y + Height) {
                 MouseHover = ID
             }
         }
@@ -355,7 +353,7 @@
                     Torso: { rot: 0, x: 0, y: 0 },
                     LLeg: { rot: 15, x: -5, y: 39 },
                     RLeg: { rot: -15, x: 5, y: 39 },
-                    Face: "PrefferedSide"   
+                    Face: "PrefferedSide"
                 },
                 {
                     Head: { rot: 0, x: 0, y: -20 },
@@ -364,7 +362,7 @@
                     Torso: { rot: 0, x: 0, y: 0 },
                     LLeg: { rot: 40, x: -13, y: 35 },
                     RLeg: { rot: -40, x: 13, y: 35 },
-                    Face: "PrefferedSide"   
+                    Face: "PrefferedSide"
                 }
             ],
             Walking: [
@@ -384,7 +382,7 @@
                     Torso: { rot: 0, x: 0, y: 0 },
                     LLeg: { rot: 15, x: -5, y: 39 },
                     RLeg: { rot: -15, x: 5, y: 39 },
-                    Face: "PrefferedSide"   
+                    Face: "PrefferedSide"
                 },
                 {
                     Head: { rot: 0, x: 0, y: -20 },
@@ -393,7 +391,7 @@
                     Torso: { rot: 0, x: 0, y: 0 },
                     LLeg: { rot: 30, x: -10, y: 37 },
                     RLeg: { rot: -30, x: 10, y: 37 },
-                    Face: "PrefferedSide"   
+                    Face: "PrefferedSide"
                 },
                 {
                     Head: { rot: 0, x: 0, y: -20 },
@@ -402,7 +400,7 @@
                     Torso: { rot: 0, x: 0, y: 0 },
                     LLeg: { rot: 40, x: -13, y: 35 },
                     RLeg: { rot: -40, x: 13, y: 35 },
-                    Face: "PrefferedSide"   
+                    Face: "PrefferedSide"
                 },
                 {
                     Head: { rot: 0, x: 0, y: -20 },
@@ -411,7 +409,7 @@
                     Torso: { rot: 0, x: 0, y: 0 },
                     LLeg: { rot: -15, x: 5, y: 39 },
                     RLeg: { rot: 15, x: -5, y: 39 },
-                    Face: "PrefferedSide"   
+                    Face: "PrefferedSide"
                 },
                 {
                     Head: { rot: 0, x: 0, y: -20 },
@@ -420,7 +418,7 @@
                     Torso: { rot: 0, x: 0, y: 0 },
                     LLeg: { rot: -30, x: 10, y: 37 },
                     RLeg: { rot: 30, x: -10, y: 37 },
-                    Face: "PrefferedSide"   
+                    Face: "PrefferedSide"
                 },
                 {
                     Head: { rot: 0, x: 0, y: -20 },
@@ -429,11 +427,11 @@
                     Torso: { rot: 0, x: 0, y: 0 },
                     LLeg: { rot: -40, x: 13, y: 35 },
                     RLeg: { rot: 40, x: -13, y: 35 },
-                    Face: "PrefferedSide"   
+                    Face: "PrefferedSide"
                 }
             ]
         };
-        let WalkFrameOrder = [1,2,3,2,1,0,4,5,6,5,4,0]
+        let WalkFrameOrder = [1, 2, 3, 2, 1, 0, 4, 5, 6, 5, 4, 0]
         let characterState = "Idle"
         let animframe = 0
 
@@ -571,7 +569,7 @@
         })
 
         //initialize variables for game loop
-        
+
         let escapemenuY = 1920
         let Currentgame = 0
         let prevgame = 0
@@ -600,9 +598,9 @@
             MouseHover = null
             let leftrightbias = 0
 
-            animationClock = Math.max(animationClock-dt*((characterState == "Walking") ? (speed/50) : 1), 0)
+            animationClock = Math.max(animationClock - dt * ((characterState == "Walking") ? (speed / 50) : 1), 0)
 
-            escapemenuY += dt*4000*(EscapeMenuOpen ? -1 : 1) 
+            escapemenuY += dt * 4000 * (EscapeMenuOpen ? -1 : 1)
             escapemenuY = clamp(escapemenuY, 120, 1920)
 
             //clear the canvas
@@ -620,7 +618,7 @@
                 characterState = "Idle"
                 animframe = 0
             } else {
-                PlrY += yvel*dt
+                PlrY += yvel * dt
                 if (keysdown.has("ArrowLeft")) { leftrightbias -= 1 }
                 if (keysdown.has("a")) { leftrightbias -= 1 }
                 if (keysdown.has("ArrowRight")) { leftrightbias += 1 }
@@ -638,19 +636,19 @@
                 }
                 let movex = clamp(leftrightbias, -1, 1) * dt * speed * Size
                 if (PlrY >= GameDataLoaded.floor) {
-                    if (movex==0) {
+                    if (movex == 0) {
                         characterState = "Idle"
                         animframe = 0
                     } else {
                         if (characterState != "Walking") {
                             animframe = 0
-                            animationClock = WalkFrameOrder.length/walkanimspeed
+                            animationClock = WalkFrameOrder.length / walkanimspeed
                         }
                         characterState = "Walking"//Change to walking when animation is present
                         if (animationClock == 0) {
-                            animationClock = WalkFrameOrder.length/walkanimspeed
+                            animationClock = WalkFrameOrder.length / walkanimspeed
                         }
-                        animframe = WalkFrameOrder[WalkFrameOrder.length-1 - clamp(Math.floor(animationClock*walkanimspeed), 0, WalkFrameOrder.length-1)]
+                        animframe = WalkFrameOrder[WalkFrameOrder.length - 1 - clamp(Math.floor(animationClock * walkanimspeed), 0, WalkFrameOrder.length - 1)]
                     }
                 }
                 if (GameDataLoaded.width - 1920 - Scrollx <= 0 && leftrightbias > 0) {
@@ -659,25 +657,25 @@
                 if (Scrollx <= 0 && leftrightbias < 0) {
                     PlrX += movex
                 }
-                if (PlrX < 10*Size) {
-                    PlrX = 10*Size
+                if (PlrX < 10 * Size) {
+                    PlrX = 10 * Size
                     if (PlrY >= GameDataLoaded.floor || characterState == "Walking") {
                         characterState = "Idle",
-                        animframe = 0
+                            animframe = 0
                     }
                 }
-                if (PlrX > 1920 - 10*Size) {
-                    PlrX = 1920 - 10*Size
+                if (PlrX > 1920 - 10 * Size) {
+                    PlrX = 1920 - 10 * Size
                     if (PlrY >= GameDataLoaded.floor || characterState == "Walking") {
                         characterState = "Idle",
-                        animframe = 0
+                            animframe = 0
                     }
                 }
                 if (PlrY >= GameDataLoaded.floor) {
                     yvel = 0
                     PlrY = GameDataLoaded.floor
-                    if (keysdown.has("w")||keysdown.has("ArrowUp")) {
-                        yvel = -Size*(jumppower/2)
+                    if (keysdown.has("w") || keysdown.has("ArrowUp")) {
+                        yvel = -Size * (jumppower / 2)
                         animationClock = 0.1
                         characterState = "Airborne"
                         animframe = 0
@@ -689,17 +687,17 @@
                     } else {
                         animframe = 1 //change to 1 when fall animation is implemented
                     }
-                    yvel += 1000*Size*dt
+                    yvel += 1000 * Size * dt
                 }
-                
-                
+
+
             }
             prevgame = Currentgame
 
             //Draw the character
             drawCharacter(PlrX, PlrY, Size, getAnimationFrame(), facingleft)
 
-            if (Currentgame == 0){
+            if (Currentgame == 0) {
                 EscapeMenuOpen = false
                 escapemenuY = 1920
                 //draw the overlaid boblox javascript edition logo
@@ -717,16 +715,16 @@
                 circularMouseHitbox(30, 30, 25, "OpenEscape")
                 //draw the escape menu
                 if (escapemenuY < 1920) {
-                    drawRoundedRectangle((canvas.width-1280)/2, escapemenuY, 1280, 840, 100, "#0009")
+                    drawRoundedRectangle((canvas.width - 1280) / 2, escapemenuY, 1280, 840, 100, "#0009")
                     if (EscapeMenuOpen) {
                         MouseHover = null
-                        mouseHitbox((canvas.width-1280)/2, escapemenuY, 1280, 840, "EscapeBackground")
+                        mouseHitbox((canvas.width - 1280) / 2, escapemenuY, 1280, 840, "EscapeBackground")
                     }
-                    
+
                 }
             }
-            
-            
+
+
 
             //draw the cursor
             drawCursor((MouseHover != null), mouseOnScreen)
