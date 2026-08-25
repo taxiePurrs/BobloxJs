@@ -608,11 +608,11 @@
                 }
             } else {
                 //draw the Boblox escape menu button
-                ctx.drawRoundedRectangle(10, 10, 50, 50, 25, "#000")
+                drawRoundedRectangle(10, 10, 50, 50, 25, "#0009")
                 circularMouseHitbox(30, 30, 25, "OpenEscape")
                 //draw the escape menu
                 if (escapemenuY < 1920) {
-                    drawRoundedRectangle((canvas.width-720)/2, escapemenuY, 720, 600, 100, "#000")
+                    drawRoundedRectangle((canvas.width-720)/2, escapemenuY, 720, 600, 100, "#0009")
                     if (EscapeMenuOpen) {
                         MouseHover = null
                         mouseHitbox((canvas.width-720)/2, escapemenuY, 720, 600, "EscapeBackground")
