@@ -453,7 +453,7 @@
 
         //click detection
         canvas.addEventListener("click", (event) => {
-            if (!MouseHover) {
+            if (MouseHover === null) {
                 EscapeMenuOpen = false
             }
             if (MouseHover == "Logo") {
@@ -497,7 +497,7 @@
 
             animationClock = Math.max(animationClock-dt*((characterState == "Walking") ? (speed/50) : 1), 0)
 
-            escapemenuY += dt*2000*(EscapeMenuOpen ? 1 : -1) 
+            escapemenuY += dt*4000*(EscapeMenuOpen ? -1 : 1) 
             escapemenuY = clamp(escapemenuY, 240, 1920)
 
             //clear the canvas
