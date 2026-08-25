@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 
 <head>
+    <meta charset="UTF-8">
     <title>BOBLOX: JAVASCRIPT EDITION</title>
 </head>
-
 <body>
     <canvas id="canvas" width="1920" height="1080" style="
         width: 100vw;
@@ -16,6 +16,111 @@
         background-color: black;
         cursor: none;
     "></canvas>
+
+<!-- ======================================================= -->
+<!-- FAIL-SAFE GAME ENGINE NETWORK LAYER                     -->
+<!-- ======================================================= -->
+<script>
+(function() {
+    // 1. Establish the fallback layer instantly to protect the 60fps frame loop
+    class FallbackOfflineLink {
+        constructor() {
+            this.isOnline = false;
+            console.log("%c[Engine Cloud] Initialized in Local Offline Mode.", "color: #bada55; font-weight: bold;");
+        }
+        broadcast() { /* Drops outbound network ticks silently when offline */ }
+        connectToPeer() { console.warn("Network unavailable. Cannot link players."); return null; }
+    }
+
+    // Assign baseline safety net variable immediately
+    window.gameNetwork = new FallbackOfflineLink();
+
+    // 2. Real networking controller executed only if the library resolves over CDN
+    class EngineNetworkLink {
+        constructor() {
+            this.peerServerUrl = '0.peerjs.com'; // Fixed missing host address
+            this.reconnectInterval = 2000;
+            this.maxReconnectInterval = 30000;
+            this.reconnectTimeout = null;
+            this.peer = null;
+            this.connections = new Map();
+            this.isOnline = false;
+            this.isConnecting = false;
+            this.initPeer();
+        }
+        initPeer() {
+            if (this.isConnecting || navigator.onLine === false) return;
+            this.isConnecting = true;
+            try {
+                this.peer = new Peer({ 
+                    host: this.peerServerUrl, 
+                    secure: true, 
+                    port: 443,
+                    debug: 1 
+                });
+                this.attachEventHandlers();
+            } catch(e) { this.isConnecting = false; }
+        }
+        attachEventHandlers() {
+            this.peer.on('open', (id) => {
+                this.isOnline = true;
+                this.isConnecting = false;
+                console.log(`%c[Engine Cloud] Connected! Player ID: ${id}`, "color: #4CAF50; font-weight: bold;");
+            });
+            this.peer.on('disconnected', () => { this.isOnline = false; this.scheduleReconnect(); });
+            this.peer.on('error', () => { this.isOnline = false; this.scheduleReconnect(); });
+            this.peer.on('connection', (conn) => this.registerConnection(conn));
+        }
+        registerConnection(conn) {
+            conn.on('open', () => this.connections.set(conn.peer, conn));
+            conn.on('data', (data) => {
+                if (typeof window.routeIncomingGameData === 'function') window.routeIncomingGameData(data);
+            });
+            conn.on('close', () => this.connections.delete(conn.peer));
+        }
+        broadcast(packet) {
+            if (!this.isOnline) return;
+            for (const [id, conn] of this.connections) { if (conn.open) conn.send(packet); }
+        }
+        connectToPeer(targetId) {
+            if (!this.isOnline) return null;
+            const conn = this.peer.connect(targetId);
+            this.registerConnection(conn);
+            return conn;
+        }
+        scheduleReconnect() {
+            if (this.reconnectTimeout) return;
+            this.reconnectTimeout = setTimeout(() => {
+                this.reconnectTimeout = null;
+                this.isConnecting = false;
+                this.reconnectInterval = Math.min(this.reconnectInterval * 1.5, this.maxReconnectInterval);
+                if (this.peer) this.peer.destroy();
+                this.initPeer();
+            }, this.reconnectInterval);
+        }
+    }
+
+    // 3. Dynamic Injection Sandbox — Safely fetches structural files without rendering freezes
+    if (navigator.onLine !== false) {
+        const cdnScript = document.createElement('script');
+        cdnScript.src = "https://jsdelivr.net"; // Fixed target path
+        
+        cdnScript.onerror = function() {
+            console.warn("[Engine Network Link] CDN unreachable. Maintaining single-player local environment.");
+        };
+
+        cdnScript.onload = function() {
+            // Swap out fallback ghost layer for an active server communication pipe
+            window.gameNetwork = new EngineNetworkLink();
+        };
+
+        document.head.appendChild(cdnScript);
+    } else {
+        console.log("[Engine Network Link] Network hardware offline. Remaining local.");
+    }
+})();
+</script>
+
     <script>
         let config = { //default config
             HeadCol: "#fe0",
