@@ -66,9 +66,13 @@
         })();
 
     </script>
+
+    <!-- ======================================================= -->
+    <!-- CLΔ STANDALONE CORE ENGINE WITH DYNAMIC CDN LOADER     -->
+    <!-- ======================================================= -->
     <script>
         (function () {
-            // 1. Establish the fallback layer instantly to protect the 60fps frame loop
+            // 1. Establish the fallback layer instantly to protect your 60fps frame loop
             class FallbackOfflineLink {
                 constructor() {
                     this.isOnline = false;
@@ -79,93 +83,215 @@
             }
 
             // Assign baseline safety net variable immediately
-            window.gameNetwork = new FallbackOfflineLink();
+            window.cldelta = new FallbackOfflineLink();
 
-            // 2. Real networking controller executed only if the library resolves over CDN
-            class EngineNetworkLink {
+            // Integrated official v1.5.5 script link priority array
+            const PEERJS_SOURCES = [
+                'https://unpkg.com',
+                'https://jsdelivr.net'
+            ];
+
+            // 2. Real networking controller executed only if a library path resolves completely
+            class CloudLinkDeltaStandalone {
                 constructor() {
-                    this.peerServerUrl = '0.peerjs.com'; // Fixed missing host address
-                    this.reconnectInterval = 2000;
-                    this.maxReconnectInterval = 30000;
-                    this.reconnectTimeout = null;
                     this.peer = null;
-                    this.connections = new Map();
-                    this.isOnline = false;
-                    this.isConnecting = false;
-                    this.initPeer();
+                    this.name = '';
+                    this.dataConnections = new Map();
+                    this.newestConnected = '';
+                    this.lastDisconnected = '';
+                    this.peerStatus = 'idle';
+                    this.verboseLogs = false;
+
+                    // Extracted official cloud signaling architecture parameters
+                    this.sessionServer = {
+                        host: 'peerjs.mikedev101.cc',
+                        port: 443,
+                        secure: true,
+                        path: '/',
+                        key: 'peerjs',
+                        config: {
+                            iceTransportPolicy: 'all',
+                            iceServers: [
+                                { urls: ['stun:vpn.mikedev101.cc:3478', 'stun:vpn.mikedev101.cc:5349'] },
+                                { urls: ['turn:vpn.mikedev101.cc:3478', 'turn:vpn.mikedev101.cc:5349'], username: 'free', credential: 'free' },
+                                {
+                                    urls: [
+                                        'stun:://google.com', 'stun:://google.com',
+                                        'stun:://google.com', 'stun:://google.com',
+                                        'stun:://cloudflare.com', 'stun:://cloudflare.com'
+                                    ]
+                                }
+                            ]
+                        }
+                    };
+
+                    this.gmsg_state = new Map();
+                    this.pmsg_state = new Map();
                 }
-                initPeer() {
-                    if (this.isConnecting || navigator.onLine === false) return;
-                    this.isConnecting = true;
+
+                connect(username) {
+                    if (!username || username.trim() === "") {
+                        console.error("[CLΔ Standalone] Username cannot be empty.");
+                        return;
+                    }
+                    this.peerStatus = 'connecting';
+                    this.name = username.trim();
+
                     try {
-                        this.peer = new Peer({
-                            host: this.peerServerUrl,
-                            secure: true,
-                            port: 443,
-                            debug: 1
+                        this.peer = new Peer(this.name, {
+                            host: this.sessionServer.host,
+                            port: this.sessionServer.port,
+                            secure: this.sessionServer.secure,
+                            path: this.sessionServer.path,
+                            key: this.sessionServer.key,
+                            config: this.sessionServer.config,
+                            debug: this.verboseLogs ? 3 : 1
                         });
-                        this.attachEventHandlers();
-                    } catch (e) { this.isConnecting = false; }
+                        this.attachSignalHandlers();
+                    } catch (e) {
+                        this.peerStatus = 'error';
+                        console.error("[CLΔ Standalone] Instantiation step failed:", e);
+                    }
                 }
-                attachEventHandlers() {
+
+                attachSignalHandlers() {
                     this.peer.on('open', (id) => {
+                        this.peerStatus = 'open';
                         this.isOnline = true;
-                        this.isConnecting = false;
-                        console.log(`%c[Engine Cloud] Connected! Player ID: ${id}`, "color: #4CAF50; font-weight: bold;");
+                        console.log(`%c[CLΔ Engine] Connected to matchmaker! Player Session ID: ${id}`, "color: #0F7EBD; font-weight: bold;");
+                        if (typeof window.onEngineNetworkOpen === 'function') window.onEngineNetworkOpen(id);
                     });
-                    this.peer.on('disconnected', () => { this.isOnline = false; this.scheduleReconnect(); });
-                    this.peer.on('error', () => { this.isOnline = false; this.scheduleReconnect(); });
-                    this.peer.on('connection', (conn) => this.registerConnection(conn));
-                }
-                registerConnection(conn) {
-                    conn.on('open', () => this.connections.set(conn.peer, conn));
-                    conn.on('data', (data) => {
-                        if (typeof window.routeIncomingGameData === 'function') window.routeIncomingGameData(data);
+
+                    this.peer.on('connection', (conn) => {
+                        this.dataConnections.set(conn.peer, conn);
+                        this.bindConnectionChannels(conn);
                     });
-                    conn.on('close', () => this.connections.delete(conn.peer));
+
+                    this.peer.on('disconnected', () => {
+                        this.peerStatus = 'disconnected';
+                        this.isOnline = false;
+                        console.warn("[CLΔ Engine] Disconnected from signaling nodes.");
+                    });
+
+                    this.peer.on('error', (err) => {
+                        this.peerStatus = 'error';
+                        this.isOnline = false;
+                        console.error("[CLΔ Engine] Internal pipeline error:", err);
+                    });
                 }
-                broadcast(packet) {
-                    if (!this.isOnline) return;
-                    for (const [id, conn] of this.connections) { if (conn.open) conn.send(packet); }
+
+                bindConnectionChannels(conn) {
+                    conn.on('open', () => {
+                        this.newestConnected = conn.peer;
+                        console.log(`[CLΔ Engine] Target peer linked successfully: ${conn.peer}`);
+
+                        // Perform official CLD Protocol initialization packet broadcast handshake
+                        conn.send(JSON.stringify({
+                            opcode: 'NEGOTIATE',
+                            ttl: 1,
+                            payload: { version: { major: 1, minor: 0, patch: 0 }, spec_version: 0 }
+                        }));
+
+                        if (typeof window.onPeerLinked === 'function') window.onPeerLinked(conn.peer);
+                    });
+
+                    conn.on('data', (raw) => {
+                        try {
+                            const packet = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                            this.routeIncomingProtocol(conn.peer, packet);
+                        } catch (err) {
+                            console.error("[CLΔ Engine] Error parsing network data packet:", err);
+                        }
+                    });
+
+                    conn.on('close', () => {
+                        this.lastDisconnected = conn.peer;
+                        this.dataConnections.delete(conn.peer);
+                        console.log(`[CLΔ Engine] Peer dropped connection: ${conn.peer}`);
+                        if (typeof window.onPeerDropped === 'function') window.onPeerDropped(conn.peer);
+                    });
                 }
+
+                routeIncomingProtocol(sender, packet) {
+                    const { opcode, payload } = packet;
+
+                    switch (opcode) {
+                        case 'G_MSG': // Global Network Packet Broadcast updates
+                            this.gmsg_state.set('default', payload);
+                            if (typeof window.routeIncomingGameData === 'function') {
+                                window.routeIncomingGameData({ type: 'BROADCAST', from: sender, data: payload });
+                            }
+                            break;
+
+                        case 'P_MSG': // Private Peer targeted messaging frames
+                            if (!this.pmsg_state.has(sender)) this.pmsg_state.set(sender, new Map());
+                            this.pmsg_state.get(sender).set('default', payload);
+                            if (typeof window.routeIncomingGameData === 'function') {
+                                window.routeIncomingGameData({ type: 'PRIVATE', from: sender, data: payload });
+                            }
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+
                 connectToPeer(targetId) {
-                    if (!this.isOnline) return null;
-                    const conn = this.peer.connect(targetId);
-                    this.registerConnection(conn);
+                    if (!this.peer || this.peer.destroyed) return null;
+                    const conn = this.peer.connect(targetId, {
+                        metadata: { name: this.name, protocol: 'delta' },
+                        reliable: true,
+                        serialization: 'json'
+                    });
+                    this.dataConnections.set(targetId, conn);
+                    this.bindConnectionChannels(conn);
                     return conn;
                 }
-                scheduleReconnect() {
-                    if (this.reconnectTimeout) return;
-                    this.reconnectTimeout = setTimeout(() => {
-                        this.reconnectTimeout = null;
-                        this.isConnecting = false;
-                        this.reconnectInterval = Math.min(this.reconnectInterval * 1.5, this.maxReconnectInterval);
-                        if (this.peer) this.peer.destroy();
-                        this.initPeer();
-                    }, this.reconnectInterval);
+
+                broadcast(message) {
+                    const packet = { opcode: 'G_MSG', origin: this.name, ttl: 1, target: '*', payload: message };
+                    for (const [peerId, conn] of this.dataConnections) {
+                        if (conn.open) conn.send(JSON.stringify(packet));
+                    }
+                }
+
+                sendPrivate(targetId, message) {
+                    const packet = { opcode: 'P_MSG', origin: this.name, ttl: 1, target: targetId, payload: message };
+                    const conn = this.dataConnections.get(targetId);
+                    if (conn && conn.open) conn.send(JSON.stringify(packet));
                 }
             }
 
-            // 3. Dynamic Injection Sandbox — Safely fetches structural files without rendering freezes
-            if (navigator.onLine !== false) {
-                const cdnScript = document.createElement('script');
-                cdnScript.src = "https://cdnjs.cloudflare.com";
+            // 3. Dynamic Sequential Loader Loop matching the original fallback array scheme
+            async function loadPeerInfrastructure(index = 0) {
+                if (index >= PEERJS_SOURCES.length) {
+                    console.warn("[CLΔ Core Loader] All CDN routes exhausted. Staying in offline sandbox mode.");
+                    return;
+                }
 
-                cdnScript.onerror = function () {
-                    console.warn("[Engine Network Link] CDN unreachable. Maintaining single-player local environment.");
+                const scriptUrl = PEERJS_SOURCES[index];
+                const scriptEl = document.createElement('script');
+                scriptEl.src = scriptUrl;
+
+                scriptEl.onload = function () {
+                    // Upgrade mock layer to an active online state class instantiation!
+                    window.cldelta = new CloudLinkDeltaStandalone();
+                    console.log(`%c[CLΔ Core Loader] Infrastructure bound successfully via path index ${index}`, "color: #4CAF50; font-weight: bold;");
                 };
 
-                cdnScript.onload = function () {
-                    // Swap out fallback ghost layer for an active server communication pipe
-                    window.gameNetwork = new EngineNetworkLink();
+                scriptEl.onerror = function () {
+                    console.warn(`[CLΔ Core Loader] Route failed to resolve: ${scriptUrl}. Switching targets...`);
+                    loadPeerInfrastructure(index + 1); // Try the next link in line
                 };
 
-                document.head.appendChild(cdnScript);
-            } else {
-                console.log("[Engine Network Link] Network hardware offline. Remaining local.");
+                document.head.appendChild(scriptEl);
             }
+
+            // Initiate the sequential load process automatically on boot up
+            loadPeerInfrastructure(0);
         })();
     </script>
+
 
     <script>
         let config = { //default config
