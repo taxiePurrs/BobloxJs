@@ -498,7 +498,7 @@
             animationClock = Math.max(animationClock-dt*((characterState == "Walking") ? (speed/50) : 1), 0)
 
             escapemenuY += dt*4000*(EscapeMenuOpen ? -1 : 1) 
-            escapemenuY = clamp(escapemenuY, 240, 1920)
+            escapemenuY = clamp(escapemenuY, 120, 1920)
 
             //clear the canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -612,10 +612,10 @@
                 circularMouseHitbox(30, 30, 25, "OpenEscape")
                 //draw the escape menu
                 if (escapemenuY < 1920) {
-                    drawRoundedRectangle((canvas.width-720)/2, escapemenuY, 720, 600, 100, "#0009")
+                    drawRoundedRectangle((canvas.width-1280)/2, escapemenuY, 1280, 840, 100, "#0009")
                     if (EscapeMenuOpen) {
                         MouseHover = null
-                        mouseHitbox((canvas.width-720)/2, escapemenuY, 720, 600, "EscapeBackground")
+                        mouseHitbox((canvas.width-1280)/2, escapemenuY, 1280, 840, "EscapeBackground")
                     }
                     
                 }
