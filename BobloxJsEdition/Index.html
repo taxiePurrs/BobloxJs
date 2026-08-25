@@ -67,9 +67,6 @@
 
     </script>
 
-    <!-- ======================================================= -->
-    <!-- CLΔ STANDALONE CORE ENGINE WITH DYNAMIC CDN LOADER     -->
-    <!-- ======================================================= -->
     <script>
         (function () {
             // 1. Establish the fallback layer instantly to protect your 60fps frame loop
@@ -294,6 +291,45 @@
 
 
     <script>
+        window.cldelta.connect("Player_Alpha");
+
+        window.onEngineNetworkOpen = function (myFinalId) {
+            console.log("Success! I am live on the network pool as: " + myFinalId);
+        };
+
+        window.onPeerLinked = function (remotePlayerId) {
+            console.log("A remote player just linked to my screen: " + remotePlayerId);
+        };
+
+        // A persistent state storage map to track all active network character objects
+        let remotePlayers = {};
+
+        // Override the network gateway listener to process your exact required payload variables
+        window.routeIncomingGameData = function (payload) {
+            const remoteSender = payload.from;
+            const packet = payload.data;
+
+            // Filter incoming traffic so you only track characters inside your active sub-server room instance
+            if (packet.type === "LIVEDATA" && packet.g === Currentgame) {
+
+                // If your custom engine hasn't encountered this user entity yet, instantiate their model
+                if (!remotePlayers[remoteSender]) {
+                    remotePlayers[remoteSender] = { x: 0, y: 0, sx: 0, state: 0, lastUpdate: Date.now() };
+                    console.log(`%c[BOBLOX Engine] Initialized character view loop instance for: ${remoteSender}`, "color: #00BCD4;");
+                }
+
+                // Store all 6 critical variables directly into your active engine dictionary state
+                remotePlayers[remoteSender].x = packet.x;                 // Character X Coordinate vector
+                remotePlayers[remoteSender].y = packet.y;                 // Character Y Coordinate vector
+                remotePlayers[remoteSender].sx = packet.sx;               // Remote World Scroll Camera offset variable
+                remotePlayers[remoteSender].state = packet.state;         // Target active keyframe rendering frame pointer
+                remotePlayers[remoteSender].game = packet.g;       // Current game
+                remotePlayers[remoteSender].size = packet.s;       // avatar scale
+                remotePlayers[remoteSender].lastUpdate = Date.now();       // Local update clock timestamp marker
+            }
+        };
+
+
         let config = { //default config
             HeadCol: "#fe0",
             LArmCol: "#fe0",
@@ -868,8 +904,24 @@
             }
             prevgame = Currentgame
 
+            for (let id in remotePlayers) {
+                let p = remotePlayers[id];
+
+                if (Date.now() - p.lastUpdate > 5000) {
+                    delete remotePlayers[id];
+                    continue;
+                }
+
+                let renderX = p.x - Scrollx; // Subtracting YOUR local camera scroll value positions them perfectly
+                let renderY = p.y;
+
+                drawCharacter(renderX, renderY, p.s, p.state, p.m)
+            }
+
+
             //Draw the character
             drawCharacter(PlrX, PlrY, Size, getAnimationFrame(), facingleft)
+
 
             if (Currentgame == 0) {
                 EscapeMenuOpen = false
@@ -912,6 +964,19 @@
                     "Arial",
                     "#fff"
                 )
+            }
+
+            if (window.cldelta.isOnline) {
+                window.cldelta.broadcast({
+                    type: "LIVEDATA",
+                    x: PlrX,
+                    y: PlrY,
+                    g: Currentgame,
+                    sx: Scrollx,
+                    s: Size,
+                    m: facingleft,
+                    state: getAnimationFrame()
+                });
             }
 
             lasttime = currentTime
