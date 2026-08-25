@@ -35,6 +35,7 @@
     ">Initializing BOBLOX Screen Console...</div>
     <script>
         (function () {
+
             const screenConsole = document.getElementById('game-console');
             const originalLog = console.log;
             const originalWarn = console.warn;
@@ -69,6 +70,32 @@
                     // This prevents a logger error from ever crashing your actual game loop.
                 }
             }
+
+            // 1. Intercept Standard Uncaught Errors (e.g., "variable is not defined")
+            window.onerror = function (message, source, lineno, colno, error) {
+                // Format a clean, human-readable error log for your screen overlay
+                const cleanErrorMsg = `[CRASH AVOIDED] Line ${lineno}: ${message}`;
+
+                if (typeof console.error === 'function') {
+                    console.error(cleanErrorMsg);
+                }
+
+                // Returning TRUE stops the browser from throwing a fatal, script-killing crash!
+                return true;
+            };
+
+            // 2. Intercept Broken Asynchronous Promises (e.g., Network/PeerJS timeouts)
+            window.onunhandledrejection = function (event) {
+                const cleanRejectMsg = `[ASYNC CRASH AVOIDED]: ${event.reason}`;
+
+                if (typeof console.error === 'function') {
+                    console.error(cleanRejectMsg);
+                }
+
+                // Prevent the default browser console thread crash sequence
+                event.preventDefault();
+            };
+
 
             // Overwrite the console channels with protected wrappers
             console.log = function (...args) {
