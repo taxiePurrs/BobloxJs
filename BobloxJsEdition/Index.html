@@ -340,7 +340,19 @@
 
 
     <script>
-        window.cldelta.connect("Player_Alpha");
+        function startMultiplayerNetwork() {
+            // Check if the real cldelta class has swapped in yet
+            if (typeof window.cldelta.connect === 'function') {
+                console.log("Network infrastructure verified. Syncing player session...");
+                window.cldelta.connect("Player_Alpha"); // Safe to connect now!
+            } else {
+                // If it's not ready yet, wait 100ms and check again
+                setTimeout(startMultiplayerNetwork, 100);
+            }
+        }
+
+        // Start the check loop running
+        startMultiplayerNetwork();
 
         window.onEngineNetworkOpen = function (myFinalId) {
             console.log("Success! I am live on the network pool as: " + myFinalId);
