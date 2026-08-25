@@ -1,0 +1,28 @@
+name: Compile BobloxJs Single File Game
+
+on:
+  push:
+    branches:
+      - main # Change this to 'master' if your default branch is named master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Download your repository files onto the GitHub server
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 2. Give the build script permission to run and execute it
+    - name: Compile HTML and PNGs
+      run: |
+        chmod +x build.sh
+        ./build.sh
+
+    # 3. Package the final single-file game so you can download it
+    - name: Upload Single File Game Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: bobloxjs-offline-game
+        path: dist/index.html
