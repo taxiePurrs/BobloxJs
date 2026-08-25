@@ -340,19 +340,38 @@
 
 
     <script>
+        // A safe helper function to generate a cryptographic UUID string v4 natively
+        function generateEngineUUID() {
+            try {
+                // Native modern browser method (fastest and most secure)
+                return window.crypto.randomUUID();
+            } catch (e) {
+                // Safe math fallback string generator just in case crypto flags fail on older devices
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            }
+        }
+
+        // Generate and store a unique identifier for this Chromebook instance session
+        const MY_UNIQUE_PLAYER_ID = "BOBLOX_" + generateEngineUUID().substring(0, 8); // Uses first 8 characters for readable logs
+
         function startMultiplayerNetwork() {
-            // Check if the real cldelta class has swapped in yet
             if (typeof window.cldelta.connect === 'function') {
-                console.log("Network infrastructure verified. Syncing player session...");
-                window.cldelta.connect("Player_Alpha"); // Safe to connect now!
+                console.log(`[Engine Cloud] Infrastructure ready. Registering session as: ${MY_UNIQUE_PLAYER_ID}`);
+
+                // Pass your brand new unique UUID token straight into the matchmaker node!
+                window.cldelta.connect(MY_UNIQUE_PLAYER_ID);
             } else {
-                // If it's not ready yet, wait 100ms and check again
                 setTimeout(startMultiplayerNetwork, 100);
             }
         }
 
-        // Start the check loop running
+        // Run the initialization sequence loop
         startMultiplayerNetwork();
+
 
         window.onEngineNetworkOpen = function (myFinalId) {
             console.log("Success! I am live on the network pool as: " + myFinalId);
