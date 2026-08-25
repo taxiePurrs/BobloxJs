@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+
+<head>
+    <title>boblox</title>
+</head>
+
+<body>
+    <canvas id="canvas" width="1920" height="1080" style="
+        width: 100vw;
+        height: 56.25vw; /* 9/16 * 100 */
+        max-height: 100vh;
+        max-width: 177.78vh; /* 16/9 * 100 */
+        margin: auto;
+        position: absolute;
+        top: 0; bottom: 0; left: 0; right: 0;
+        background-color: black;
+        cursor: none;
+    "></canvas>
+    <script>
+        let config = { //default config
+            HeadCol: "#fe0",
+            LArmCol: "#fe0",
+            RArmCol: "#fe0",
+            TorsoCol: "#46f",
+            LLegCol: "#3c0",
+            RLegCol: "#3c0",
+            Face: "Happy",
+            ShowFPS: true,
+            Debug: true
+        };
+
+        for (let key in config) { //overwrite config with localstorage
+            const savedValue = localStorage.getItem(key);
+            if (savedValue !== null) {
+                config[key] = savedValue;
+            }
+        }
+
+        function saveConfigValue(key, value) { //save config to localstorage
+            config[key] = value;
+            localStorage.setItem(key, value);
+        }
+
+        let mousex = 0, mousey = 0, mouseOnScreen = false, MouseHover = null
+        const canvas = document.getElementById("canvas")
+        const ctx = canvas.getContext('2d');
+        canvas.addEventListener('mousemove', (event) => {
+            const rect = canvas.getBoundingClientRect();
+
+            // Get the 0-1 ratio and clamp it
+            let xRatio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+            let yRatio = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+
+            // Assign the calculated pixel integers to your existing variables
+            mousex = Math.floor(xRatio * canvas.width);
+            mousey = Math.floor(yRatio * canvas.height);
+        });
+
+        canvas.addEventListener("mouseenter", (event) => { mouseOnScreen = true })
+        canvas.addEventListener("mouseleave", (event) => { mouseOnScreen = false })
+
+        const keysdown = new Set();
+
+        window.addEventListener("keydown", (event) => keysdown.add(event.key));
+        window.addEventListener("keyup", (event) => keysdown.delete(event.key));
+
+        const cursor = new Image(), cursorHov = new Image()
+        cursor.src = "./Textures/White.png"
+        cursorHov.src = "./Textures/Black.png"
+
+        function drawCursor(isHovering, draw) {
+            if (!draw) { return } //skip drawing if draw is false
+            const currentImg = isHovering ? cursorHov : cursor; //sets the active cursor texture based on hover status
+
+            // Only draw if the browser has finished reading the image file dimensions
+            if (currentImg.naturalWidth > 0) {
+                ctx.drawImage(
+                    currentImg,
+                    mousex - currentImg.naturalWidth / 2,
+                    mousey - currentImg.naturalHeight / 2
+                );
+            }
+        }
+
+        function drawRectangle(X, Y, Width, Height, Color) {
+            ctx.fillStyle = Color
+            ctx.fillRect(X, Y, Width, Height)
+        }
+
+        function drawRoundedRectangle(X, Y, Width, Height, Radius, Color) {
+            ctx.fillStyle = Color;
+            ctx.beginPath();
+            ctx.roundRect(X, Y, Width, Height, Radius);
+            ctx.fill();
+        }
+
+        function drawRotatedRectangle(X, Y, Width, Height, Degrees, Color) {
+            ctx.fillStyle = Color;
+            ctx.save();
+
+            // Move grid origin to the center of where the rectangle should be
+            ctx.translate(X + Width / 2, Y + Height / 2);
+
+            // Rotate the grid
+            ctx.rotate((Degrees * Math.PI) / 180);
+
+            // Draw the rectangle centered on the new origin
+            ctx.fillRect(-Width / 2, -Height / 2, Width, Height);
+
+            ctx.restore();
+        }
+
+        function drawRotatedRoundedRectangle(X, Y, Width, Height, Radius, Degrees, Color) {
+            ctx.fillStyle = Color;
+            ctx.save();
+
+            ctx.translate(X + Width / 2, Y + Height / 2);
+            ctx.rotate((Degrees * Math.PI) / 180);
+
+            ctx.beginPath();
+            ctx.roundRect(-Width / 2, -Height / 2, Width, Height, Radius);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawRotatedImage(image, X, Y, Scale, Degrees) {
+            // 1. Skip if the image hasn't fully loaded from the disk yet
+            if (image.naturalWidth === 0) return;
+
+            // 2. Calculate the scaled dimensions
+            const width = image.naturalWidth * Scale;
+            const height = image.naturalHeight * Scale;
+
+            ctx.save();
+
+            // 3. Move the grid origin to the center of the image location
+            ctx.translate(X + width / 2, Y + height / 2);
+
+            // 4. Rotate the grid (Degrees to Radians)
+            ctx.rotate((Degrees * Math.PI) / 180);
+
+            // 5. Draw the image centered on the new origin using negative half-sizes
+            ctx.drawImage(image, -width / 2, -height / 2, width, height);
+
+            ctx.restore();
+        }
+
+        function drawComplexImage(image, X, Y, Scale, Degrees, MirrorX) {
+            if (image.naturalWidth === 0) return;
+
+            const width = image.naturalWidth * Scale;
+            const height = image.naturalHeight * Scale;
+
+            ctx.save();
+            ctx.translate(X + width / 2, Y + height / 2);
+
+            // 1. Handle mirroring first
+            const flipX = MirrorX ? -1 : 1;
+            ctx.scale(flipX, 1);
+
+            // 2. Handle rotation second (Invert degrees if mirrored so it rotates the correct direction)
+            ctx.rotate(((Degrees * flipX) * Math.PI) / 180);
+
+            ctx.drawImage(image, -width / 2, -height / 2, width, height);
+
+            ctx.restore();
+        }
+
+        function mouseHitbox(X, Y, Width, Height, ID) {
+            if (mousex > X && mousex < X+Width && mousey > Y && mousey < Y+Height) {
+                MouseHover = ID
+            }
+        }
+
+        function drawText(Text, X, Y, Size, Font, Color, Alignment) {
+            ctx.fillStyle = Color;
+            ctx.font = `${Size}px ${Font}`;
+            ctx.textAlign = Alignment || "left"; // Options: "left", "center", "right"
+            ctx.textBaseline = "middle";         // Centers text vertically on the Y anchor
+            ctx.fillText(Text, X, Y);
+        }
+
+        function DarkenHex(hex) {
+            let cleanHex = hex.replace('#', '');
+            let isShort = cleanHex.length === 3;
+
+            if (isShort) {
+                // Subtract 2 from each shorthand hex digit (approx. 32 in 8-bit)
+                return '#' + Array.from(cleanHex).map(char => {
+                    let val = parseInt(char, 16);
+                    return Math.max(0, val - 2).toString(16);
+                }).join('');
+            } else {
+                // Process standard 6-digit hex
+                let r = parseInt(cleanHex.substring(0, 2), 16);
+                let g = parseInt(cleanHex.substring(2, 4), 16);
+                let b = parseInt(cleanHex.substring(4, 6), 16);
+
+                r = Math.max(0, r - 32).toString(16).padStart(2, '0');
+                g = Math.max(0, g - 32).toString(16).padStart(2, '0');
+                b = Math.max(0, b - 32).toString(16).padStart(2, '0');
+
+                return `#${r}${g}${b}`;
+            }
+        }
+
+        let NotInGameOverlay = new Image()
+        NotInGameOverlay.src = "./Textures/Overlay.png"
+
+
+        let faceSideHappy = new Image()
+        faceSideHappy.src = "./Textures/FaceSideHappy.png"
+
+        const faces = {
+            HappySide: faceSideHappy
+        }
+
+        let animationFrames = {
+            Idle: [
+                {
+                    Head: { rot: 0, x: 0, y: -20 },
+                    LArm: { rot: 0, x: 0, y: 0 },
+                    RArm: { rot: 0, x: 0, y: 0 },
+                    Torso: { rot: 0, x: 0, y: 0 },
+                    LLeg: { rot: 0, x: 0, y: 40 },
+                    RLeg: { rot: 0, x: 0, y: 40 },
+                    Face: "PrefferedSide"
+                }
+            ],
+            Airborne: [
+                {
+                    Head: { rot: 0, x: 0, y: -20 },
+                    LArm: { rot: -30, x: 8, y: -2 },
+                    RArm: { rot: -30, x: 8, y: -2 },
+                    Torso: { rot: 0, x: 0, y: 0 },
+                    LLeg: { rot: 15, x: -5, y: 39 },
+                    RLeg: { rot: -15, x: 5, y: 39 },
+                    Face: "PrefferedSide"   
+                },
+                {
+                    Head: { rot: 0, x: 0, y: -20 },
+                    LArm: { rot: 180, x: 0, y: -30 },
+                    RArm: { rot: 180, x: 0, y: -30 },
+                    Torso: { rot: 0, x: 0, y: 0 },
+                    LLeg: { rot: 40, x: -13, y: 35 },
+                    RLeg: { rot: -40, x: 13, y: 35 },
+                    Face: "PrefferedSide"   
+                }
+            ],
+            Walking: [
+                {
+                    Head: { rot: 0, x: 0, y: -20 },
+                    LArm: { rot: 0, x: 0, y: 0 },
+                    RArm: { rot: 0, x: 0, y: 0 },
+                    Torso: { rot: 0, x: 0, y: 0 },
+                    LLeg: { rot: 0, x: 0, y: 40 },
+                    RLeg: { rot: 0, x: 0, y: 40 },
+                    Face: "PrefferedSide"
+                },
+                {
+                    Head: { rot: 0, x: 0, y: -20 },
+                    LArm: { rot: -15, x: 4, y: 0 },
+                    RArm: { rot: 15, x: -4, y: 0 },
+                    Torso: { rot: 0, x: 0, y: 0 },
+                    LLeg: { rot: 15, x: -5, y: 39 },
+                    RLeg: { rot: -15, x: 5, y: 39 },
+                    Face: "PrefferedSide"   
+                },
+                {
+                    Head: { rot: 0, x: 0, y: -20 },
+                    LArm: { rot: -30, x: 8, y: -2 },
+                    RArm: { rot: 30, x: -8, y: -2 },
+                    Torso: { rot: 0, x: 0, y: 0 },
+                    LLeg: { rot: 30, x: -10, y: 37 },
+                    RLeg: { rot: -30, x: 10, y: 37 },
+                    Face: "PrefferedSide"   
+                },
+                {
+                    Head: { rot: 0, x: 0, y: -20 },
+                    LArm: { rot: -40, x: 10, y: -4 },
+                    RArm: { rot: 40, x: -10, y: -4 },
+                    Torso: { rot: 0, x: 0, y: 0 },
+                    LLeg: { rot: 40, x: -13, y: 35 },
+                    RLeg: { rot: -40, x: 13, y: 35 },
+                    Face: "PrefferedSide"   
+                },
+                {
+                    Head: { rot: 0, x: 0, y: -20 },
+                    LArm: { rot: 15, x: -4, y: 0 },
+                    RArm: { rot: -15, x: 4, y: 0 },
+                    Torso: { rot: 0, x: 0, y: 0 },
+                    LLeg: { rot: -15, x: 5, y: 39 },
+                    RLeg: { rot: 15, x: -5, y: 39 },
+                    Face: "PrefferedSide"   
+                },
+                {
+                    Head: { rot: 0, x: 0, y: -20 },
+                    LArm: { rot: 30, x: -8, y: -2 },
+                    RArm: { rot: -30, x: 8, y: -2 },
+                    Torso: { rot: 0, x: 0, y: 0 },
+                    LLeg: { rot: -30, x: 10, y: 37 },
+                    RLeg: { rot: 30, x: -10, y: 37 },
+                    Face: "PrefferedSide"   
+                },
+                {
+                    Head: { rot: 0, x: 0, y: -20 },
+                    LArm: { rot: 40, x: -10, y: -4 },
+                    RArm: { rot: -40, x: 10, y: -4 },
+                    Torso: { rot: 0, x: 0, y: 0 },
+                    LLeg: { rot: -40, x: 13, y: 35 },
+                    RLeg: { rot: 40, x: -13, y: 35 },
+                    Face: "PrefferedSide"   
+                }
+            ]
+        };
+        let WalkFrameOrder = [1,2,3,2,1,0,4,5,6,5,4,0]
+        let characterState = "Idle"
+        let animframe = 0
+
+        function getAnimationFrame() {
+            const track = animationFrames[characterState];
+            if (track && track[animframe]) {
+                return track[animframe];
+            }
+            return null;
+        }
+
+        let PlrX = 960, PlrY = 540
+
+        function drawCharacter(X, Y, Scale, Data, Mirror) {
+            // Offsets so the position is top-left of the character instead of the feet
+            X -= 10 * Scale;
+            Y -= 80 * Scale;
+
+            // Multiplier: 1 for normal rendering, -1 to invert horizontal properties
+            const flipX = Mirror ? -1 : 1;
+
+            // Left arm
+            drawRotatedRectangle(
+                X + (Data.LArm.x * Scale * flipX),
+                Y + (Data.LArm.y * Scale),
+                Scale * 20,
+                Scale * 40,
+                Data.LArm.rot * flipX,
+                DarkenHex(Mirror ? config.RArmCol : config.LArmCol)
+            );
+            // Left leg
+            drawRotatedRectangle(
+                X + (Data.LLeg.x * Scale * flipX),
+                Y + (Data.LLeg.y * Scale),
+                Scale * 20,
+                Scale * 40,
+                Data.LLeg.rot * flipX,
+                DarkenHex(Mirror ? config.RLegCol : config.LLegCol)
+            );
+
+            // Head
+            drawRotatedRoundedRectangle(
+                X + (Data.Head.x * Scale * flipX),
+                Y + (Data.Head.y * Scale),
+                Scale * 20,
+                Scale * 20,
+                Scale * 5,
+                Data.Head.rot * flipX,
+                config.HeadCol
+            );
+
+            //face
+            let face = Data.Face
+            if (face == "PrefferedSide") {
+                face = config.Face + "Side"
+            }
+
+            const facetexture = faces[face];
+            if (facetexture && facetexture.naturalWidth > 0) {
+                // 1. Calculate how much to shrink the image to fit your original 20px target size
+                const internalScale = 20 / facetexture.naturalWidth;
+
+                // 2. Multiply by your global character Scale setting
+                const finalFaceScale = Scale * internalScale;
+
+                drawComplexImage(
+                    facetexture,
+                    X + (Data.Head.x * Scale * flipX),
+                    Y + (Data.Head.y * Scale),
+                    finalFaceScale,
+                    Data.Head.rot * flipX,
+                    Mirror
+                );
+            }
+
+            // Right leg
+            drawRotatedRectangle(
+                X + (Data.RLeg.x * Scale * flipX),
+                Y + (Data.RLeg.y * Scale),
+                Scale * 20,
+                Scale * 40,
+                Data.RLeg.rot * flipX,
+                Mirror ? config.LLegCol : config.RLegCol
+            );
+
+            // Torso
+            drawRotatedRectangle(
+                X + (Data.Torso.x * Scale * flipX),
+                Y + (Data.Torso.y * Scale),
+                Scale * 20,
+                Scale * 40,
+                Data.Torso.rot * flipX,
+                config.TorsoCol
+            );
+
+            // Right arm
+            drawRotatedRectangle(
+                X + (Data.RArm.x * Scale * flipX),
+                Y + (Data.RArm.y * Scale),
+                Scale * 20,
+                Scale * 40,
+                Data.RArm.rot * flipX,
+                Mirror ? config.LArmCol : config.RArmCol
+            );
+        }
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(value, max));
+        }
+
+        let gamedata = {
+            "1": {
+                floor: 940,
+                width: 1920,
+                startposx: 90,
+                startposy: 940,
+                Size: 2.5,
+            }
+        }
+
+        
+
+        let Currentgame = 0
+        let prevgame = 0
+        let animationClock = 0
+        let facingleft = false
+        let lastTime = 0
+        let yvel = 0
+        let Scrollx = 0
+        let GameDataLoaded = null
+        let speed = 150
+        let Size = 2.5
+        let jumppower = 1000
+
+        const walkanimspeed = 6
+
+        function gameLoop(currentTime) {
+            let dt = (currentTime - lastTime) / 1000;
+            if (Number.isNaN(dt) || dt > 0.1) dt = 0;
+            lastTime = currentTime;
+            //set reset hovering id
+            MouseHover = null
+            let leftrightbias = 0
+
+            animationClock = Math.max(animationClock-dt*((characterState == "Walking") ? (speed/50) : 1), 0)
+
+            //clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawRectangle(0, 0, canvas.width, canvas.height, "#111")
+
+            //handle Key inputs
+
+
+            if (Currentgame == 0) {
+                PlrX = 240
+                PlrY = 480
+                Size = 3
+                facingleft = false
+                characterState = "Idle"
+                animframe = 0
+            } else {
+                PlrY += yvel*dt
+                if (keysdown.has("ArrowLeft")) { leftrightbias -= 1 }
+                if (keysdown.has("a")) { leftrightbias -= 1 }
+                if (keysdown.has("ArrowRight")) { leftrightbias += 1 }
+                if (keysdown.has("d")) { leftrightbias += 1 }
+
+                if (leftrightbias > 0) { facingleft = false }
+                if (leftrightbias < 0) { facingleft = true }
+                if (Currentgame != prevgame) {
+                    GameDataLoaded = gamedata[String(Currentgame)]
+                    PlrX = GameDataLoaded.startposx
+                    PlrY = GameDataLoaded.startposy
+                    yvel = 0
+                    Scrollx = 0
+                    Size = GameDataLoaded.Size
+                }
+                let movex = clamp(leftrightbias, -1, 1) * dt * speed * Size
+                if (PlrY >= GameDataLoaded.floor) {
+                    if (movex==0) {
+                        characterState = "Idle"
+                        animframe = 0
+                    } else {
+                        if (characterState != "Walking") {
+                            animframe = 0
+                            animationClock = WalkFrameOrder.length/walkanimspeed
+                        }
+                        characterState = "Walking"//Change to walking when animation is present
+                        if (animationClock == 0) {
+                            animationClock = WalkFrameOrder.length/walkanimspeed
+                        }
+                        animframe = WalkFrameOrder[WalkFrameOrder.length-1 - clamp(Math.floor(animationClock*walkanimspeed), 0, WalkFrameOrder.length-1)]
+                    }
+                }
+                if (GameDataLoaded.width - 1920 - Scrollx <= 0 && leftrightbias > 0) {
+                    PlrX += movex
+                }
+                if (Scrollx <= 0 && leftrightbias < 0) {
+                    PlrX += movex
+                }
+                if (PlrX < 10*Size) {
+                    PlrX = 10*Size
+                    if (PlrY >= GameDataLoaded.floor || characterState == "Walking") {
+                        characterState = "Idle",
+                        animframe = 0
+                    }
+                }
+                if (PlrX > 1920 - 10*Size) {
+                    PlrX = 1920 - 10*Size
+                    if (PlrY >= GameDataLoaded.floor || characterState == "Walking") {
+                        characterState = "Idle",
+                        animframe = 0
+                    }
+                }
+                if (PlrY >= GameDataLoaded.floor) {
+                    yvel = 0
+                    PlrY = GameDataLoaded.floor
+                    if (keysdown.has("w")||keysdown.has("ArrowUp")) {
+                        yvel = -Size*(jumppower/2)
+                        animationClock = 0.1
+                        characterState = "Airborne"
+                        animframe = 0
+                    }
+                } else {
+                    characterState = "Airborne"
+                    if (animationClock > 0) {
+                        animframe = 0
+                    } else {
+                        animframe = 1 //change to 1 when fall animation is implemented
+                    }
+                    yvel += 1000*Size*dt
+                }
+                
+                
+            }
+            prevgame = Currentgame
+
+            //Draw the character
+            drawCharacter(PlrX, PlrY, Size, getAnimationFrame(), facingleft)
+
+            ctx.drawImage(NotInGameOverlay, 0, 0)
+            mouseHitbox(10, 10, 315, 94, "Logo")
+            
+
+            //draw the cursor
+            drawCursor((MouseHover != null), mouseOnScreen)
+
+            if (/*config.ShowFPS*/ true) {
+                drawText(
+                    Math.round(1 / dt) + " FPS",
+                    0,
+                    20,
+                    40,
+                    "Arial",
+                    "#fff"
+                )
+            }
+
+            lasttime = currentTime
+            requestAnimationFrame(gameLoop); //request next frame
+        }
+
+        requestAnimationFrame(gameLoop); //start the game loop
+    </script>
+</body>
