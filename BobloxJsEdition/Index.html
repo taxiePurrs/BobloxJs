@@ -33,6 +33,34 @@
         border: 1px solid #333;
         z-index: 1000;
     ">Initializing BOBLOX Screen Console...</div>
+    <div id="matchmaker-ui" style="
+       position: absolute;
+       top: 220px;
+       left: 10px;
+       width: 400px;
+       background: rgba(0, 0, 0, 0.7);
+       border: 1px solid #333;
+       padding: 10px;
+       font-family: monospace;
+       z-index: 1000;
+    ">
+        <div style="color: #FFF; margin-bottom: 8px;">BOBLOX MATCHMAKING</div>
+
+        <!-- Section 1: Creating a Room -->
+        <div style="margin-bottom: 12px;">
+            <button id="btn-create-room" style="width: 100%; padding: 5px; cursor: pointer;">Host a New Lobby</button>
+            <div id="display-room-code" style="color: #00BCD4; margin-top: 4px; display: none;">Lobby Code: <span
+                    id="txt-room-code" style="font-weight: bold;"></span></div>
+        </div>
+
+        <!-- Section 2: Joining a Room -->
+        <div>
+            <input type="text" id="input-room-code" placeholder="Enter Friend's Lobby Code"
+                style="width: 70%; padding: 4px;">
+            <button id="btn-join-room" style="width: 25%; padding: 4px; cursor: pointer;">Join</button>
+        </div>
+    </div>
+
     <script>
         (function () {
 
@@ -378,7 +406,15 @@
         };
 
         window.onPeerLinked = function (remotePlayerId) {
-            console.log("A remote player just linked to my screen: " + remotePlayerId);
+            console.log("[NETWORK] Connected to player: " + remotePlayerId);
+        };
+
+        window.onPeerDropped = function (remotePlayerId) {
+            console.log("[NETWORK] Player left the game: " + remotePlayerId);
+
+            if (remotePlayers && remotePlayers[remotePlayerId]) {
+                delete remotePlayers[remotePlayerId];
+            }
         };
 
         // A persistent state storage map to track all active network character objects
@@ -878,6 +914,108 @@
         const NETWORK_TICK_RATE = 100
 
         const walkanimspeed = 6
+
+        // Grab UI elements
+        const btnCreateRoom = document.getElementById('btn-create-room');
+        const btnJoinRoom = document.getElementById('btn-join-room');
+        const inputRoomCode = document.getElementById('input-room-code');
+        const displayRoomCode = document.getElementById('display-room-code');
+        const txtRoomCode = document.getElementById('txt-room-code');
+
+        // Matchmaking State variables
+        let isLobbyHost = false;
+        let connectedPeersList = [];
+
+        // 1. ACTION: Host a New Lobby Room
+        btnCreateRoom.onclick = function () {
+            if (!window.cldelta.isOnline) {
+                console.log("Cannot host: You are completely offline.");
+                return;
+            }
+
+            // Force your generated UUID to act directly as the Room Code string
+            // This uses the active registration ID we got from the matchmaker server
+            const myLobbyCode = window.cldelta.name;
+
+            isLobbyHost = true;
+            Currentgame = myLobbyCode; // Assigns your global game variable context
+
+            // Update the layout view
+            txtRoomCode.innerText = myLobbyCode;
+            displayRoomCode.style.display = "block";
+
+            console.log("Lobby hosted. Tell your classmate to type code: " + myLobbyCode);
+        };
+
+        // 2. ACTION: Join an existing Friend's Lobby Room
+        btnJoinRoom.onclick = function () {
+            const targetCode = inputRoomCode.value.trim();
+
+            if (targetCode === "") {
+                console.log("Please input a valid room code.");
+                return;
+            }
+
+            if (targetCode === window.cldelta.name) {
+                console.log("You cannot matchmake or connect with yourself!");
+                return;
+            }
+
+            console.log("Searching matchmaker servers for room code: " + targetCode);
+
+            // Direct P2P tunnel initialization request via CloudLink API layers
+            isLobbyHost = false;
+            Currentgame = targetCode; // Sync your game room variable context to their room ID
+
+            window.cldelta.connectToPeer(targetCode);
+        };
+
+        // 3. HANDSHAKE: Ensure clients pass network pipelines to other arrivals
+        window.onPeerLinked = function (remotePlayerId) {
+            console.log("[NETWORK] Connected to player: " + remotePlayerId);
+
+            // Keep track of who is in our engine cluster
+            if (!connectedPeersList.includes(remotePlayerId)) {
+                connectedPeersList.push(remotePlayerId);
+            }
+
+            // CRITICAL MATCHMAKING HANDSHAKE STEP:
+            // If you are the Host, and a second client joins, tell them about everyone else in the room
+            // This forces all arriving players to link together automatically!
+            if (isLobbyHost) {
+                window.cldelta.sendPrivate(remotePlayerId, {
+                    type: "ROOM_SYNC",
+                    peers: connectedPeersList
+                });
+            }
+        };
+
+        // 4. ROUTER: Parse matchmaking management instructions 
+        // Add this condition directly inside your existing window.routeIncomingGameData function
+        const originalRouteHandler = window.routeIncomingGameData;
+        window.routeIncomingGameData = function (payload) {
+            // Run your existing frame movement tracking loops first
+            if (typeof originalRouteHandler === 'function') {
+                originalRouteHandler(payload);
+            }
+
+            const packet = payload.data;
+
+            // Intercept automatic lobby routing updates sent by the host
+            if (packet.type === "ROOM_SYNC" && !isLobbyHost) {
+                console.log("Received room cluster updates from Lobby Host.");
+
+                // Loop through all existing players in the match and bind to them
+                packet.peers.forEach(peerId => {
+                    if (peerId !== window.cldelta.name && !connectedPeersList.includes(peerId)) {
+                        console.log("Auto-linking to peer member: " + peerId);
+                        window.cldelta.connectToPeer(peerId);
+                        connectedPeersList.push(peerId);
+                    }
+                });
+            }
+        };
+
 
         //some HomeMenu Textures and assets
         let tycoonico = new Image()
