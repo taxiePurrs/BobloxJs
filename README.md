@@ -1,8 +1,8 @@
 # Boblox Javascript Edition
 Main repo for the Javascript recreation of boblox 2
 
-**TODO**
-<p>
+<pre>
+<b>TODO</b>
 Improve p2p interface
     Server settings
         Password
@@ -28,4 +28,4 @@ Escape menu
     Leave button
     Resume button
     Player List
-</p>
+</pre>
