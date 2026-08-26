@@ -434,7 +434,7 @@
                 // If your custom engine hasn't encountered this user entity yet, instantiate their model
                 if (!remotePlayers[remoteSender]) {
                     remotePlayers[remoteSender] = { x: 0, y: 0, sx: 0, state: 0, lastUpdate: Date.now() };
-                    console.log(`%c[BOBLOX Engine] Initialized character view loop instance for: ${remoteSender}`, "color: #00BCD4;");
+                    console.log(`%c[BOBLOX Engine] Initialized character view loop instance for: ${remoteSender}`);
                 }
 
                 //console.log("Try to parse packet")
@@ -1036,6 +1036,8 @@
             }
         };
 
+        let Bico = new Image()
+        loadImage(Bico, "B.png")
 
         //some HomeMenu Textures and assets
         let tycoonico = new Image()
@@ -1153,9 +1155,11 @@
                     continue;
                 }
 
-                let renderX = p.x + p.sx - Scrollx; // Subtracting YOUR local camera scroll value positions them perfectly
-                let renderY = p.y;
-                drawCharacter(renderX, renderY, p.s, p.state, p.m)
+                if (p.g == Currentgame) {
+                    let renderX = p.x + p.sx - Scrollx; // Subtracting YOUR local camera scroll value positions them perfectly
+                    let renderY = p.y;
+                    drawCharacter(renderX, renderY, p.s, p.state, p.m)
+                }
                 //console.log(renderX)
                 //console.log(p.state)
                 //console.log(renderY)
@@ -1182,6 +1186,7 @@
             } else {
                 //draw the Boblox escape menu button
                 drawRoundedRectangle(10, 10, 50, 50, 25, "#0009")
+                ctx.drawImage(Bico, 10, 10)
                 circularMouseHitbox(30, 30, 25, "OpenEscape")
                 //draw the escape menu
                 if (escapemenuY < 1920) {
@@ -1197,7 +1202,7 @@
 
 
             //draw the cursor
-            drawCursor((MouseHover != null), mouseOnScreen)
+            drawCursor((!(MouseHover == null || MouseHover == "EscapeBackground")), mouseOnScreen)
 
             if (/*config.ShowFPS*/ true) {
                 drawText(
@@ -1209,7 +1214,7 @@
                     "#fff"
                 )
             }
-            
+
             if (window.cldelta.isOnline && (currentTime - lastNetworkTick >= NETWORK_TICK_RATE)) {
                 //console.log(currentTime)
                 // 1. Fetch the raw animation frame object matrix
