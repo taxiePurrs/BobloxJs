@@ -33,33 +33,57 @@
         border: 1px solid #333;
         z-index: 1000;
         cursor: text;
+        display: none;
     ">Initializing BOBLOX Screen Console...</div>
         <div id="matchmaker-ui" style="
-       position: absolute;
-       top: 230px;
-       right: 10px;
-       width: 400px;
-       background: rgba(0, 0, 0, 0.7);
-       border: 1px solid #333;
-       padding: 10px;
-       font-family: monospace;
-       z-index: 1000;
-    ">
-            <div style="color: #FFF; margin-bottom: 8px;">BOBLOX MATCHMAKING</div>
-
-            <!-- Section 1: Creating a Room -->
-            <div style="margin-bottom: 12px;">
-                <button id="btn-create-room" style="width: 100%; padding: 5px; cursor: pointer;">Host a New
-                    Lobby</button>
-                <div id="display-room-code" style="color: #00BCD4; margin-top: 4px; display: none;">Lobby Code: <span
-                        id="txt-room-code" style="font-weight: bold;"></span></div>
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    width: 420px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid #444;
+    padding: 12px;
+    font-family: monospace;
+    z-index: 1000;
+">
+            <div
+                style="color: #FFF; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 4px;">
+                BOBLOX MULTIPLAYER PANEL
             </div>
 
-            <!-- Section 2: Joining a Room -->
-            <div>
-                <input type="text" id="input-room-code" placeholder="Enter Friend's Lobby Code"
-                    style="width: 70%; padding: 4px;">
-                <button id="btn-join-room" style="width: 25%; padding: 4px; cursor: pointer;">Join</button>
+            <!-- Action Layer 1: Host a Lobby Configurations -->
+            <div style="margin-bottom: 14px; background: rgba(255,255,255,0.05); padding: 8px; border: 1px solid #222;">
+                <div style="color: #AAA; font-size: 11px; margin-bottom: 4px;">HOST A SERVER</div>
+                <input type="text" id="input-server-name" placeholder="Enter Server Name (e.g. My Cool Map)"
+                    style="width: 95%; padding: 4px; margin-bottom: 6px; background: #222; color: #FFF; border: 1px solid #444;">
+                <button id="btn-create-room"
+                    style="width: 100%; padding: 6px; cursor: pointer; font-weight: bold;">Create & List Lobby</button>
+                <div id="display-room-code" style="color: #00BCD4; margin-top: 6px; display: none; font-size: 13px;">
+                    Active Code: <span id="txt-room-code"
+                        style="font-weight: bold; background: #222; padding: 2px 6px; border: 1px solid #333;"></span>
+                </div>
+            </div>
+
+            <!-- Action Layer 2: Public Cloud Server Browser List -->
+            <div style="background: rgba(255,255,255,0.05); padding: 8px; border: 1px solid #222;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <div style="color: #AAA; font-size: 11px;">PUBLIC LOBBIES (CLOUD REPOSITORY)</div>
+                    <button id="btn-refresh-servers" style="padding: 2px 8px; cursor: pointer; font-size: 11px;">🔄
+                        Refresh</button>
+                </div>
+
+                <!-- The Scrolling Container Segment where active listings append dynamically -->
+                <div id="server-list-container" style="
+            width: 98%;
+            height: 160px;
+            background: #111;
+            border: 1px solid #333;
+            overflow-y: auto;
+            padding: 4px 0px;
+        ">
+                    <div style="color: #555; text-align: center; margin-top: 65px; font-size: 12px;">Click Refresh to
+                        load active servers...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -451,6 +475,120 @@
                 //console.log("Parsed packet")
             }
         };
+
+        // Replace these with your actual keys from your Supabase panel project dashboard
+        const SUPABASE_URL = "https://wzcrhodevcelyjxsmdcp.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6Y3Job2RldmNlbHlqeHNtZGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3MzQ5MjIsImV4cCI6MjEwMzMxMDkyMn0.7wGVjetb2PRM-JcU7lUwn0S3hPT3UlBqc4o2gQweV3k";
+
+        const DB_HEADERS = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY,
+            "Content-Type": "application/json"
+        };
+
+        // 1. ROUTINE: Tell the cloud database you are hosting a live game
+        let heartbeatIntervalTimer = null;
+
+        // 1. ROUTINE: Tell the cloud database you are hosting a live game
+        async function registerServerInCloud(roomCode, serverName) {
+            try {
+                const payload = {
+                    room_code: roomCode,
+                    server_name: serverName,
+                    player_count: 1
+                };
+
+                // First, check if the room already exists in the database
+                const checkResponse = await fetch(`${SUPABASE_URL}/rest/v1/active_servers?room_code=eq.${roomCode}`, {
+                    method: "GET",
+                    headers: DB_HEADERS
+                });
+                const existingRooms = await checkResponse.json();
+
+                let response;
+                if (existingRooms.length > 0) {
+                    // If it exists, update it (this triggers a fresh heartbeat timestamp)
+                    response = await fetch(`${SUPABASE_URL}/rest/v1/active_servers?room_code=eq.${roomCode}`, {
+                        method: "PATCH",
+                        headers: DB_HEADERS,
+                        body: JSON.stringify({ server_name: serverName, player_count: 1 })
+                    });
+                } else {
+                    // If it doesn't exist, create it brand new
+                    response = await fetch(`${SUPABASE_URL}/rest/v1/active_servers`, {
+                        method: "POST",
+                        headers: DB_HEADERS,
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (response.ok) {
+                    console.log("Server published to cloud registry.");
+
+                    // START THE TIMED HEARTBEAT LOOP
+                    // This runs silently in the background every 30 seconds to keep the lobby alive!
+                    if (!heartbeatIntervalTimer) {
+                        heartbeatIntervalTimer = setInterval(function () {
+                            if (window.cldelta.isOnline && isLobbyHost) {
+                                console.log("Sending heartbeat ping to cloud database...");
+                                // Re-running this function sends a PATCH request, updating the timestamp row
+                                registerServerInCloud(roomCode, serverName);
+                            } else {
+                                // If we are no longer hosting, destroy the loop timer
+                                clearInterval(heartbeatIntervalTimer);
+                                heartbeatIntervalTimer = null;
+                            }
+                        }, 30000); // 30000 milliseconds = 30 seconds
+                    }
+                }
+            } catch (e) {
+                console.log("Database communication failed: " + e.message);
+            }
+        }
+
+
+        // 2. ROUTINE: Grab the active directory table to draw the server browser list
+        async function fetchActiveCloudServers() {
+            try {
+                // Fetch rows updated in the last 60 seconds to eliminate dead game ghosts
+                const cutoffTime = new Date(Date.now() - 60000).toISOString();
+                const url = `${SUPABASE_URL}/rest/v1/active_servers?last_heartbeat=gt.${cutoffTime}&select=*`;
+
+                const response = await fetch(url, { method: "GET", headers: DB_HEADERS });
+                const servers = await response.json();
+
+                console.log(`Fetched ${servers.length} live matching lobbies from database.`);
+                return servers; // Returns an array of live room objects!
+            } catch (e) {
+                console.log("Database download failed: " + e.message);
+                return [];
+            }
+        }
+
+        // 3. ROUTINE: Remove your server from the cloud when you close the room
+        async function deleteServerFromCloud(roomCode) {
+            try {
+                await fetch(`${SUPABASE_URL}/rest/v1/active_servers?room_code=eq.${roomCode}`, {
+                    method: "DELETE",
+                    headers: DB_HEADERS
+                });
+                console.log("Lobby closed and cleared from public matrix registries.");
+            } catch (e) { }
+        }
+
+        // Automatically fires when a player closes their browser tab or navigates away
+        window.onbeforeunload = function () {
+            if (isLobbyHost && window.cldelta.name) {
+                // Send a synchronous beacon or rapid request to wipe the server row before closing down
+                fetch(`${SUPABASE_URL}/rest/v1/active_servers?room_code=eq.${window.cldelta.name}`, {
+                    method: "DELETE",
+                    headers: DB_HEADERS,
+                    keepalive: true // Crucial line to ensure the request finishes after the tab dies
+                });
+            }
+        };
+
+
 
 
         let config = { //default config
@@ -904,7 +1042,7 @@
 
         const debugcontainer = document.getElementById("DebugSide")
         window.addEventListener("keydown", (event) => {
-            if (event.key == "Tab") {
+            if (event.key == "m") {
                 if (debugcontainer.style.display == "block") {
                     debugcontainer.style.display = "none"
                 } else {
@@ -936,9 +1074,11 @@
         const walkanimspeed = 6
 
         // Grab UI elements
+        // 1. Setup element pointers matching your new HTML elements exactly
         const btnCreateRoom = document.getElementById('btn-create-room');
-        const btnJoinRoom = document.getElementById('btn-join-room');
-        const inputRoomCode = document.getElementById('input-room-code');
+        const btnRefreshServers = document.getElementById('btn-refresh-servers');
+        const serverListContainer = document.getElementById('server-list-container');
+        const inputServerName = document.getElementById('input-server-name');
         const displayRoomCode = document.getElementById('display-room-code');
         const txtRoomCode = document.getElementById('txt-room-code');
 
@@ -946,49 +1086,100 @@
         let isLobbyHost = false;
         let connectedPeersList = [];
 
-        // 1. ACTION: Host a New Lobby Room
+        // 2. ACTION: Host a New Lobby Room & Publish to the Cloud
         btnCreateRoom.onclick = function () {
             if (!window.cldelta.isOnline) {
                 console.log("Cannot host: You are completely offline.");
                 return;
             }
 
-            // Force your generated UUID to act directly as the Room Code string
-            // This uses the active registration ID we got from the matchmaker server
             const myLobbyCode = window.cldelta.name;
-
             isLobbyHost = true;
-            currentparty = myLobbyCode; // Assigns your global game variable context
+            currentparty = myLobbyCode; // Assigns your global game room context tracking variable
 
-            // Update the layout view
+            // Update the on-screen code display panel view layout
             txtRoomCode.innerText = myLobbyCode;
             displayRoomCode.style.display = "block";
 
-            console.log("Lobby hosted. Tell your classmate to type code: " + myLobbyCode);
+            console.log("Lobby created locally. Publishing address index to cloud database...");
+
+            // Grab the name typed in the new input bar, or use a default baseline name
+            let typedName = inputServerName.value.trim();
+            if (typedName === "") typedName = "A BOBLOX Game Server";
+
+            // Push the row data straight to your public Supabase matrix records!
+            registerServerInCloud(myLobbyCode, typedName);
         };
 
-        // 2. ACTION: Join an existing Friend's Lobby Room
-        btnJoinRoom.onclick = function () {
-            const targetCode = inputRoomCode.value.trim();
+        // 3. ACTION: Query Database & Render Clickable Server Browse Items
+        btnRefreshServers.onclick = async function () {
+            serverListContainer.innerHTML = '<div style="color: #888; text-align: center; margin-top: 65px; font-size: 12px;">Querying cloud directory...</div>';
 
-            if (targetCode === "") {
-                console.log("Please input a valid room code.");
+            // Fetch live entries from your database module
+            const availableLobbies = await fetchActiveCloudServers();
+            console.log(availableLobbies)
+
+            // Clear out loading text layout indicators entirely
+            serverListContainer.innerHTML = "";
+
+            if (availableLobbies.length === 0) {
+                serverListContainer.innerHTML = '<div style="color: #666; text-align: center; margin-top: 65px; font-size: 12px;">No active lobbies found.</div>';
                 return;
             }
 
-            if (targetCode === window.cldelta.name) {
-                console.log("You cannot matchmake or connect with yourself!");
-                return;
-            }
+            // Loop through the data and draw clickable connection rows inside the scrolling view box
+            availableLobbies.forEach(serverRow => {
+                // Skip listing yourself in your own browser list!
+                if (serverRow.room_code === window.cldelta.name) return;
 
-            console.log("Searching matchmaker servers for room code: " + targetCode);
+                const serverItem = document.createElement('div');
+                serverItem.style.cssText = `
+                    display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #222;
+            margin: 4px 6px;
+            padding: 6px 10px;
+            border: 1px solid #333;
+            border-left: 3px solid #00BCD4;
+        `;
 
-            // Direct P2P tunnel initialization request via CloudLink API layers
-            isLobbyHost = false;
-            currentparty = targetCode; // Sync your game room variable context to their room ID
+                serverItem.innerHTML = `
+            <div style="overflow: hidden; max-width: 240px;">
+                <div style="color: #FFF; font-size: 13px; text-overflow: ellipsis; white-space: nowrap;">${serverRow.server_name}</div>
+                <div style="color: #666; font-size: 10px;">ID: ${serverRow.room_code.substring(0, 12)}...</div>
+            </div>
+            <button class="join-lobby-btn" data-code="${serverRow.room_code}" style="
+                padding: 4px 10px;
+                background: #00BCD4;
+                color: #000;
+                border: none;
+                font-weight: bold;
+                cursor: pointer;
+                font-family: monospace;
+            ">JOIN</button>
+        `;
 
-            window.cldelta.connectToPeer(targetCode);
+                serverListContainer.appendChild(serverItem);
+            });
+
+            // Capture all newly rendered JOIN buttons and attach P2P link triggers
+            const joinButtons = document.querySelectorAll('.join-lobby-btn');
+            joinButtons.forEach(button => {
+                button.onclick = function () {
+                    const targetRoomCode = this.getAttribute('data-code');
+                    console.log("Connecting via cloud selection to: " + targetRoomCode);
+
+                    isLobbyHost = false;
+                    currentparty = targetRoomCode; // Sync your game room variable context to their room ID
+
+                    if (typeof window.cldelta.connectToPeer === 'function') {
+                        window.cldelta.connectToPeer(targetRoomCode);
+                    }
+                };
+            });
         };
+
 
         // 3. HANDSHAKE: Ensure clients pass network pipelines to other arrivals
         window.onPeerLinked = function (remotePlayerId) {

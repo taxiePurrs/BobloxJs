@@ -6,7 +6,6 @@ Main repo for the Javascript recreation of boblox 2
 Improve p2p interface
     Server settings
         Password
-        Server visibility
         Server name
     Server List
 
