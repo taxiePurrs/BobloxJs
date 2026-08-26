@@ -17,10 +17,11 @@
         background-color: black;
         cursor: none;
     "></canvas>
-    <div id="game-console" style="
+    <div id="DebugSide" style="position: fixed; width: fit-content; margin: 0px; display: block; right: 0px;>
+        <div id="game-console" style="
         position: absolute;
         top: 10px;
-        left: 10px;
+        right: 10px;
         width: 400px;
         height: 200px;
         background: rgba(0, 0, 0, 0.7);
@@ -33,10 +34,10 @@
         z-index: 1000;
         cursor: text;
     ">Initializing BOBLOX Screen Console...</div>
-    <div id="matchmaker-ui" style="
+        <div id="matchmaker-ui" style="
        position: absolute;
        top: 230px;
-       left: 10px;
+       right: 10px;
        width: 400px;
        background: rgba(0, 0, 0, 0.7);
        border: 1px solid #333;
@@ -44,20 +45,22 @@
        font-family: monospace;
        z-index: 1000;
     ">
-        <div style="color: #FFF; margin-bottom: 8px;">BOBLOX MATCHMAKING</div>
+            <div style="color: #FFF; margin-bottom: 8px;">BOBLOX MATCHMAKING</div>
 
-        <!-- Section 1: Creating a Room -->
-        <div style="margin-bottom: 12px;">
-            <button id="btn-create-room" style="width: 100%; padding: 5px; cursor: pointer;">Host a New Lobby</button>
-            <div id="display-room-code" style="color: #00BCD4; margin-top: 4px; display: none;">Lobby Code: <span
-                    id="txt-room-code" style="font-weight: bold;"></span></div>
-        </div>
+            <!-- Section 1: Creating a Room -->
+            <div style="margin-bottom: 12px;">
+                <button id="btn-create-room" style="width: 100%; padding: 5px; cursor: pointer;">Host a New
+                    Lobby</button>
+                <div id="display-room-code" style="color: #00BCD4; margin-top: 4px; display: none;">Lobby Code: <span
+                        id="txt-room-code" style="font-weight: bold;"></span></div>
+            </div>
 
-        <!-- Section 2: Joining a Room -->
-        <div>
-            <input type="text" id="input-room-code" placeholder="Enter Friend's Lobby Code"
-                style="width: 70%; padding: 4px;">
-            <button id="btn-join-room" style="width: 25%; padding: 4px; cursor: pointer;">Join</button>
+            <!-- Section 2: Joining a Room -->
+            <div>
+                <input type="text" id="input-room-code" placeholder="Enter Friend's Lobby Code"
+                    style="width: 70%; padding: 4px;">
+                <button id="btn-join-room" style="width: 25%; padding: 4px; cursor: pointer;">Join</button>
+            </div>
         </div>
     </div>
 
@@ -105,7 +108,7 @@
                 const cleanErrorMsg = `[CRASH AVOIDED] Line ${event.lineno}: ${event.message}`;
 
                 if (typeof console.error === 'function') {
-                    console.error(event);
+                    console.error(cleanErrorMsg);
                 }
 
                 // Returning TRUE stops the browser from throwing a fatal, script-killing crash!
@@ -186,18 +189,15 @@
                         config: {
                             iceTransportPolicy: 'all',
                             iceServers: [
-                                { urls: ['stun:vpn.mikedev101.cc:3478', 'stun:vpn.mikedev101.cc:5349'] },
-                                { urls: ['turn:vpn.mikedev101.cc:3478', 'turn:vpn.mikedev101.cc:5349'], username: 'free', credential: 'free' },
-                                {
-                                    urls: [
-                                        'stun:://google.com', 'stun:://google.com',
-                                        'stun:://google.com', 'stun:://google.com',
-                                        'stun:://cloudflare.com', 'stun:://cloudflare.com'
-                                    ]
-                                }
+                                // Safe, globally whitelisted STUN servers that school filters never block
+                                { urls: 'stun:google.com' },
+                                { urls: 'stun:google.com' },
+                                { urls: 'stun:google.com' },
+                                { urls: 'stun:cloudflare.com' }
                             ]
                         }
                     };
+
 
                     this.gmsg_state = new Map();
                     this.pmsg_state = new Map();
@@ -345,21 +345,24 @@
 
                 const scriptUrl = PEERJS_SOURCES[index];
                 const scriptEl = document.createElement('script');
+
+                // NEW CRITICAL LINE: This tells the browser to unmute the errors for this file!
+                scriptEl.crossOrigin = "anonymous";
                 scriptEl.src = scriptUrl;
 
                 scriptEl.onload = function () {
-                    // Upgrade mock layer to an active online state class instantiation!
                     window.cldelta = new CloudLinkDeltaStandalone();
-                    console.log(`%c[CLΔ Core Loader] Infrastructure bound successfully via path index ${index}`);
+                    console.log(`[CLΔ Core Loader] Infrastructure bound successfully via index ${index}`);
                 };
 
                 scriptEl.onerror = function () {
                     console.warn(`[CLΔ Core Loader] Route failed to resolve: ${scriptUrl}. Switching targets...`);
-                    loadPeerInfrastructure(index + 1); // Try the next link in line
+                    loadPeerInfrastructure(index + 1);
                 };
 
                 document.head.appendChild(scriptEl);
             }
+
 
             // Initiate the sequential load process automatically on boot up
             loadPeerInfrastructure(0);
@@ -426,7 +429,7 @@
             const packet = payload.data;
 
             // Filter incoming traffic so you only track characters inside your active sub-server room instance
-            if (packet.type === "LIVEDATA" && packet.g === Currentgame) {
+            if (packet.type === "LIVEDATA" /*&& packet.g === Currentgame*/) {
 
                 // If your custom engine hasn't encountered this user entity yet, instantiate their model
                 if (!remotePlayers[remoteSender]) {
@@ -434,14 +437,18 @@
                     console.log(`%c[BOBLOX Engine] Initialized character view loop instance for: ${remoteSender}`, "color: #00BCD4;");
                 }
 
-                // Store all 6 critical variables directly into your active engine dictionary state
+                //console.log("Try to parse packet")
+
+                // Store all critical variables directly into your active engine dictionary state
                 remotePlayers[remoteSender].x = packet.x;                 // Character X Coordinate vector
                 remotePlayers[remoteSender].y = packet.y;                 // Character Y Coordinate vector
                 remotePlayers[remoteSender].sx = packet.sx;               // Remote World Scroll Camera offset variable
                 remotePlayers[remoteSender].state = packet.state;         // Target active keyframe rendering frame pointer
-                remotePlayers[remoteSender].game = packet.g;       // Current game
-                remotePlayers[remoteSender].size = packet.s;       // avatar scale
+                remotePlayers[remoteSender].g = packet.g;       // Current game
+                remotePlayers[remoteSender].s = packet.s;       // avatar scale
+                remotePlayers[remoteSender].m = packet.m;   //mirrored anim
                 remotePlayers[remoteSender].lastUpdate = Date.now();       // Local update clock timestamp marker
+                //console.log("Parsed packet")
             }
         };
 
@@ -862,6 +869,7 @@
                 Data.RArm.rot * flipX,
                 Mirror ? config.LArmCol : config.RArmCol
             );
+            //console.log("drew character at"+Date.now())
         }
 
         function clamp(value, min, max) {
@@ -894,6 +902,17 @@
             }
         })
 
+        const debugcontainer = document.getElementById("DebugSide")
+        window.addEventListener("keydown", (event) => {
+            if (event.key == "Tab") {
+                if (debugcontainer.style.display == "block") {
+                    debugcontainer.style.display = "none"
+                } else {
+                    debugcontainer.style.display = "block"
+                }
+            }
+        });
+
         //initialize variables for game loop
 
         let escapemenuY = 1920
@@ -912,7 +931,7 @@
         let menu = 0
 
         let lastNetworkTick = 0;
-        const NETWORK_TICK_RATE = 100
+        const NETWORK_TICK_RATE = 50
 
         const walkanimspeed = 6
 
@@ -1129,15 +1148,18 @@
             for (let id in remotePlayers) {
                 let p = remotePlayers[id];
 
-                if (Date.now() - p.lastUpdate > 5000) {
+                if (Date.now() - p.lastUpdate > 25000) {
                     delete remotePlayers[id];
                     continue;
                 }
 
-                let renderX = p.x - Scrollx; // Subtracting YOUR local camera scroll value positions them perfectly
+                let renderX = p.x + p.sx - Scrollx; // Subtracting YOUR local camera scroll value positions them perfectly
                 let renderY = p.y;
-
                 drawCharacter(renderX, renderY, p.s, p.state, p.m)
+                //console.log(renderX)
+                //console.log(p.state)
+                //console.log(renderY)
+                //console.log(p.s)
             }
 
 
@@ -1187,11 +1209,27 @@
                     "#fff"
                 )
             }
+            
             if (window.cldelta.isOnline && (currentTime - lastNetworkTick >= NETWORK_TICK_RATE)) {
+                //console.log(currentTime)
+                // 1. Fetch the raw animation frame object matrix
+                let rawAnimFrame = typeof getAnimationFrame === 'function' ? getAnimationFrame() : null;
 
-                // Ensure state is just a simple number or text name string, not a complex object
-                let currentAnimState = typeof getAnimationFrame === 'function' ? getAnimationFrame() : 0;
+                // 2. Double-check guard: If it's missing or an unready string, pass a default idle structure
+                let safeFramePacket = rawAnimFrame;
+                if (!safeFramePacket || typeof safeFramePacket !== 'object') {
+                    safeFramePacket = {
+                        Head: { rot: 0, x: 0, y: -20 },
+                        LArm: { rot: 0, x: 0, y: 0 },
+                        RArm: { rot: 0, x: 0, y: 0 },
+                        Torso: { rot: 0, x: 0, y: 0 },
+                        LLeg: { rot: 0, x: 0, y: 40 },
+                        RLeg: { rot: 0, x: 0, y: 40 },
+                        Face: "PrefferedSide"
+                    }
+                };
 
+                // 3. Broadcast all required values directly over CloudLink P2P channels
                 window.cldelta.broadcast({
                     type: "LIVEDATA",
                     x: PlrX,
@@ -1200,11 +1238,14 @@
                     sx: Scrollx,
                     s: Size,
                     m: facingleft,
-                    state: currentAnimState
+                    state: safeFramePacket // Drops your nested skeletal table cleanly into the payload
                 });
 
-                lastNetworkTick = currentTime; // Update the network clock gate timer
+
+
+                lastNetworkTick = currentTime;
             }
+
 
             lasttime = currentTime
             requestAnimationFrame(gameLoop); //request next frame
