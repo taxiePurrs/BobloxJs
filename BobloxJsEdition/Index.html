@@ -100,9 +100,9 @@
             }
 
             // 1. Intercept Standard Uncaught Errors (e.g., "variable is not defined")
-            window.onerror = function (message, source, lineno, colno, error) {
+            window.addEventListener("error", (event) => {
                 // Format a clean, human-readable error log for your screen overlay
-                const cleanErrorMsg = `[CRASH AVOIDED] Line ${lineno}: ${message}`;
+                const cleanErrorMsg = `[CRASH AVOIDED] Line ${event.lineno}: ${event.message}`;
 
                 if (typeof console.error === 'function') {
                     console.error(cleanErrorMsg);
@@ -110,7 +110,7 @@
 
                 // Returning TRUE stops the browser from throwing a fatal, script-killing crash!
                 return true;
-            };
+            });
 
             // 2. Intercept Broken Asynchronous Promises (e.g., Network/PeerJS timeouts)
             window.onunhandledrejection = function (event) {
