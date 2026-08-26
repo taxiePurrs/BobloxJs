@@ -105,7 +105,7 @@
                 const cleanErrorMsg = `[CRASH AVOIDED] Line ${event.lineno}: ${event.message}`;
 
                 if (typeof console.error === 'function') {
-                    console.error(cleanErrorMsg);
+                    console.error(event);
                 }
 
                 // Returning TRUE stops the browser from throwing a fatal, script-killing crash!
