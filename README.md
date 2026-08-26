@@ -25,4 +25,6 @@ Escape menu
     Leave button
     Resume button
     Player List
+
+Chat
 </pre>

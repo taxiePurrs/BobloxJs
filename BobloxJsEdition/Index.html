@@ -6,7 +6,7 @@
 </head>
 
 <body>
-    <canvas id="canvas" width="1920" height="1080" style="
+    <div style="
         width: 100vw;
         height: 56.25vw; /* 9/16 * 100 */
         max-height: 100vh;
@@ -15,8 +15,18 @@
         position: absolute;
         top: 0; bottom: 0; left: 0; right: 0;
         background-color: black;
+        display: block;
         cursor: none;
-    "></canvas>
+    ">
+    <canvas id="canvas" width="1920" height="1080" style="
+        width: 100vw;
+        height: 56.25vw; /* 9/16 * 100 */
+        max-height: 100vh;
+        max-width: 177.78vh; /* 16/9 * 100 */
+    ">
+    </canvas>
+    <input type="text" aria-multiline="false" style="padding-left: 15px; font-size: 20px; position: inherit; border-radius: 1000px; left: 0.520833333% ; top: 35.185185185%; width: 21.875%; height: 4.629629629%; outline-style: none; border-style: none;  ">
+    </div>
     <div id="DebugSide" style="position: fixed; width: fit-content; margin: 0px; display: none; right: 0px;">
         <div id="game-console" style="
         position: absolute;
@@ -1039,6 +1049,8 @@
                 EscapeMenuOpen = !EscapeMenuOpen
             } else if (MouseHover == "Leave") {
                 Currentgame = 0
+            } else if (MouseHover == "OpenChat") {
+                chatopen = !chatopen
             }
         })
 
@@ -1229,8 +1241,18 @@
             }
         };
 
+        let chatopen = false
+
         let Bico = new Image()
         loadImage(Bico, "B.png")
+
+        let Chatico = new Image()
+        loadImage(Chatico, "GoogleMaterialChat.png")
+
+        let Chatico2 = new Image()
+        loadImage(Chatico2, "GoogleMaterialChat2.png")
+        let Chaticosend = new Image()
+        loadImage(Chaticosend, "GoogleMaterialPlane.png")
 
         //some HomeMenu Textures and assets
         let tycoonico = new Image()
@@ -1377,10 +1399,30 @@
                     mouseHitbox(235, 120, 240, 240, "Tycoonicon")
                 }
             } else {
+                circularMouseHitbox(35, 35, 25, "OpenEscape")
                 //draw the Boblox escape menu button
-                drawRoundedRectangle(10, 10, 50, 50, 25, "#0009")
+                drawRoundedRectangle(10, 10, 50, 50, 25, (MouseHover == "OpenEscape" && !EscapeMenuOpen) ? "#9999" : "#0009")
                 ctx.drawImage(Bico, 10, 10)
-                circularMouseHitbox(30, 30, 25, "OpenEscape")
+                
+
+                //draw the chat button
+                circularMouseHitbox(95, 35, 25, "OpenChat")
+                drawRoundedRectangle(70, 10, 50, 50, 25, (MouseHover == "OpenChat" && !EscapeMenuOpen) ? "#9999" : "#0009")
+                ctx.drawImage(chatopen ? Chatico2 : Chatico, 80, 20)
+
+                if (chatopen) {
+                    //chat background
+                    drawRoundedRectangle(10, 70, 480, 360, 25, "#0009")
+
+                    //chat input
+                    drawRoundedRectangle(10, 20+360, 480, 50, 25, "#2229")
+
+                    //chat send
+                    circularMouseHitbox(-15+480, 45+360, 25, "SendChat")
+                    drawRoundedRectangle(-40+480, 20+360, 50, 50, 25, (MouseHover == "SendChat") ? "#09f9" : "#9999")
+                    ctx.drawImage(Chaticosend, -30+480, 30+360)
+                }
+
                 //draw the escape menu
                 if (escapemenuY < 1920) {
                     if (EscapeMenuOpen) {
@@ -1400,7 +1442,7 @@
             //draw the cursor
             drawCursor((!(MouseHover == null || MouseHover == "EscapeBackground")), mouseOnScreen)
 
-            if (/*config.ShowFPS*/ true) {
+            if (config.ShowFPS) {
                 drawText(
                     Math.round(1 / dt) + " FPS",
                     0,
