@@ -6,8 +6,6 @@ Main repo for the Javascript recreation of boblox 2
 Improve p2p interface
     Server settings
         Password
-        Server name
-    Server List
 
 Config saving and editor
     Avatar editor
