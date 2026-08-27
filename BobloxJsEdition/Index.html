@@ -25,7 +25,7 @@
         max-width: 177.78vh; /* 16/9 * 100 */
     ">
     </canvas>
-    <input type="text" aria-multiline="false" style="padding-left: 15px; font-size: 20px; position: inherit; border-radius: 1000px; left: 0.520833333% ; top: 35.185185185%; width: 21.875%; height: 4.629629629%; outline-style: none; border-style: none;  ">
+    <input id="chatinput" type="text" aria-multiline="false" style="padding-left: 10px; font-size: 20px; position: inherit; border-radius: 1000px; left: 0.520833333% ; top: 35.185185185%; width: 21.875%; height: 4.629629629%; outline-style: none; border-style: none; display: none; background-color: transparent; color: #FFF;">
     </div>
     <div id="DebugSide" style="position: fixed; width: fit-content; margin: 0px; display: none; right: 0px;">
         <div id="game-console" style="
@@ -1251,8 +1251,11 @@
 
         let Chatico2 = new Image()
         loadImage(Chatico2, "GoogleMaterialChat2.png")
+
         let Chaticosend = new Image()
         loadImage(Chaticosend, "GoogleMaterialPlane.png")
+
+        const inputbar = document.getElementById("chatinput")
 
         //some HomeMenu Textures and assets
         let tycoonico = new Image()
@@ -1398,6 +1401,8 @@
                     ctx.drawImage(tycoonico, 235, 120, 240, 240)
                     mouseHitbox(235, 120, 240, 240, "Tycoonicon")
                 }
+
+                inputbar.style.display = "none"
             } else {
                 circularMouseHitbox(35, 35, 25, "OpenEscape")
                 //draw the Boblox escape menu button
@@ -1410,17 +1415,20 @@
                 drawRoundedRectangle(70, 10, 50, 50, 25, (MouseHover == "OpenChat" && !EscapeMenuOpen) ? "#9999" : "#0009")
                 ctx.drawImage(chatopen ? Chatico2 : Chatico, 80, 20)
 
-                if (chatopen) {
+                if (chatopen && !EscapeMenuOpen) {
                     //chat background
                     drawRoundedRectangle(10, 70, 480, 360, 25, "#0009")
 
                     //chat input
                     drawRoundedRectangle(10, 20+360, 480, 50, 25, "#2229")
+                    inputbar.style.display = "block"
 
                     //chat send
                     circularMouseHitbox(-15+480, 45+360, 25, "SendChat")
                     drawRoundedRectangle(-40+480, 20+360, 50, 50, 25, (MouseHover == "SendChat") ? "#09f9" : "#9999")
                     ctx.drawImage(Chaticosend, -30+480, 30+360)
+                } else {
+                    inputbar.style.display = "none"
                 }
 
                 //draw the escape menu
