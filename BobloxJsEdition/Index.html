@@ -12,6 +12,9 @@
         .chatmessage {
             color: white;
             font-family: Arial;
+            white-space: normal; 
+            overflow-wrap: break-word; 
+            word-break: break-word; 
         }
     </style>
 </head>
@@ -37,6 +40,7 @@
         </canvas>
         <div id="chatCountainer" style="
             background-color: #0009;
+            backdrop-filter: blur(8px);
             position: inherit;
             display: block;
             border-radius: 5.21% / 6.94%;
@@ -46,15 +50,18 @@
             height: 33.333%;
         ">
             <div id="ChatBox" style="
-        background-color: transparent;
-        position: inherit;
-        left: 0px;
-        top: 0px;
-        width: 100%;
-        height: 86.111%;
-        border-radius: 5.21% 5.21% 0% 0% / 8.06% 8.06% 0% 0%;
-        cursor: var(--cursor1);
-        "></div>
+            box-sizing: border-box;
+            padding: 10px;
+            padding-bottom: 0px;
+            background-color: transparent;
+            position: inherit;
+            left: 0px;
+            top: 0px;
+            width: 100%;
+            height: 86.111%;
+            border-radius: 5.21% 5.21% 0% 0% / 8.06% 8.06% 0% 0%;
+            cursor: var(--cursor1);
+            "></div>
             <input placeholder='press "/" to chat' id="chatinput" type="text" aria-multiline="false" style="
             box-sizing: border-box;
             padding-inline-start: 2.0833%;
@@ -108,7 +115,7 @@
         height: fit-content;
         background-color: transparent;
         cursor: var(--cursor2);
-        display: block;
+        display: none;
         ">
             <div id="game-console" style="
         position: absolute;
@@ -117,6 +124,7 @@
         width: 420px;
         height: 200px;
         background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
         color: #4CAF50;
         font-family: monospace;
         font-size: 14px;
@@ -133,6 +141,7 @@
             right: 0px;
             width: 416px;
             background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
             border: 1px solid #444;
             padding: 12px;
             font-family: monospace;
@@ -580,7 +589,9 @@
                 //console.log("Parsed packet")
             } else if (packet.type === "CHAT") {
                 console.log(String(packet.n) + ": " + String(packet.text))
-                DrawMessage(String(packet.n) + ": " + String(packet.text))
+                if (package.g == Currentgame) {
+                    DrawMessage(String(packet.n) + ": " + String(packet.text))
+                }
             }
 
         };
@@ -760,10 +771,7 @@
         const sendchatbtn = document.getElementById("chatsendbtn")
         loadImage(sendchatbtn, "GoogleMaterialPlane.png")
 
-        const cursor = new Image(), cursorHov = new Image()
         const root = document.documentElement;
-        loadImage(cursor, "White.png")
-        loadImage(cursorHov, "Black.png")
 
         function loadImagePath (TextureName) {
             return (typeof IMAGES !== 'undefined' && IMAGES[TextureName]) ? IMAGES[TextureName] : `./Textures/${TextureName}`;
@@ -1143,6 +1151,7 @@
             //logic will be up here
             window.cldelta.broadcast({
                 type: "CHAT",
+                g: Currentgame,
                 text: inputbar.value,
                 n: config.Name,
             });
@@ -1187,6 +1196,7 @@
                         debugcontainer.style.display = "none"
                     } else {
                         debugcontainer.style.display = "block"
+                        console.log("This is the server connection and debug panel, if you arent sure what to do you can press the tab key on your keyboard to close it")
                     }
                 }
             } else if (event.key == "Enter" && isFocused(inputbar)) {
@@ -1199,12 +1209,14 @@
             } else if (event.key == "Escape" && Currentgame != 0) {
                 event.preventDefault()
                 EscapeMenuOpen = !EscapeMenuOpen
+            } else if (event.key == "l" && EscapeMenuOpen && isFocused(canvas)) {
+                Currentgame = 0
             }
         });
 
         //initialize variables for game loop
 
-        let escapemenuY = 1920
+        let escapemenuY = 1080
 
         let currentparty = 0
         let prevgame = 0
@@ -1413,7 +1425,7 @@
             animationClock = Math.max(animationClock - dt * ((characterState == "Walking") ? (speed / 50) : 1), 0)
 
             escapemenuY += dt * 4000 * (EscapeMenuOpen ? -1 : 1)
-            escapemenuY = clamp(escapemenuY, 120, 1920)
+            escapemenuY = clamp(escapemenuY, 120, 1080)
 
             //clear the canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1442,6 +1454,7 @@
                 if (leftrightbias > 0) { facingleft = false }
                 if (leftrightbias < 0) { facingleft = true }
                 if (Currentgame != prevgame) {
+                    chatBackground.innerHTML = ""
                     GameDataLoaded = gamedata[String(Currentgame)]
                     PlrX = GameDataLoaded.startposx
                     PlrY = GameDataLoaded.startposy
@@ -1535,7 +1548,7 @@
 
             if (Currentgame == 0) {
                 EscapeMenuOpen = false
-                escapemenuY = 1920
+                escapemenuY = 1080
                 //draw the overlaid boblox javascript edition logo
                 ctx.drawImage(NotInGameOverlay, 0, 0)
                 mouseHitbox(10, 10, 315, 94, "Logo") //clickbox redirects to github repo
@@ -1577,7 +1590,7 @@
                 }
 
                 //draw the escape menu
-                if (escapemenuY < 1920) {
+                if (escapemenuY < 1080) {
                     if (EscapeMenuOpen) {
                         MouseHover = null
                         mouseHitbox((canvas.width - 1280) / 2, escapemenuY, 1280, 840, "EscapeBackground")
