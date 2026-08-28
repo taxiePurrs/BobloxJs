@@ -3,9 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <title>BOBLOX: JAVASCRIPT EDITION</title>
+    <style>
+        :root {
+            --cursor1: default;
+            --cursor2: pointer;
+        }
+
+        .chatmessage {
+            color: white;
+            font-family: Arial;
+        }
+    </style>
 </head>
 
-<body>
+<body style="overflow-y: hidden; cursor: var(--cursor1);">
     <div style="
         width: 100vw;
         height: 56.25vw; /* 9/16 * 100 */
@@ -16,22 +27,93 @@
         top: 0; bottom: 0; left: 0; right: 0;
         background-color: black;
         display: block;
-        cursor: none;
     ">
-    <canvas id="canvas" width="1920" height="1080" style="
+        <canvas id="canvas" width="1920" height="1080" tabindex="0" style="
         width: 100vw;
         height: 56.25vw; /* 9/16 * 100 */
         max-height: 100vh;
         max-width: 177.78vh; /* 16/9 * 100 */
     ">
-    </canvas>
-    <input id="chatinput" type="text" aria-multiline="false" style="padding-left: 10px; font-size: 20px; position: inherit; border-radius: 1000px; left: 0.520833333% ; top: 35.185185185%; width: 21.875%; height: 4.629629629%; outline-style: none; border-style: none; display: none; background-color: transparent; color: #FFF;">
-    </div>
-    <div id="DebugSide" style="position: fixed; width: fit-content; margin: 0px; display: none; right: 0px;">
-        <div id="game-console" style="
+        </canvas>
+        <div id="chatCountainer" style="
+            background-color: #0009;
+            position: inherit;
+            display: block;
+            border-radius: 5.21% / 6.94%;
+            left: 0.520833333%;
+            top: 6.48148%;
+            width: 25%;
+            height: 33.333%;
+        ">
+            <div id="ChatBox" style="
+        background-color: transparent;
+        position: inherit;
+        left: 0px;
+        top: 0px;
+        width: 100%;
+        height: 86.111%;
+        border-radius: 5.21% 5.21% 0% 0% / 8.06% 8.06% 0% 0%;
+        cursor: var(--cursor1);
+        "></div>
+            <input placeholder='press "/" to chat' id="chatinput" type="text" aria-multiline="false" style="
+            box-sizing: border-box;
+            padding-inline-start: 2.0833%;
+            padding-inline-end: 10.4166%;
+            position: inherit;
+            border-radius: 1000px;
+            bottom: 0px;
+            left: 0px;
+            width: 100%;
+            height: 13.888%;
+            outline-style: none;
+            border-style: none;
+            background-color: #2229;
+            color: #FFF;
+        ">
+            <style>
+                #chatsendcontainer {
+                    right: 0px;
+                    bottom: 0px;
+                    height: 13.888%;
+                    aspect-ratio: 1 / 1;
+                    position: inherit;
+                    border-radius: 9999px;
+                    background-color: #9999;
+                }
+
+                #chatsendbtn {
+                    right: 0px;
+                    bottom: 0px;
+                    position: inherit;
+                    height: 100%;
+                    transform: scale(0.6);
+                }
+
+                #chatsendcontainer:hover {
+                    background-color: #09f9;
+                    cursor: var(--cursor2);
+
+                }
+
+                /*#chatsendbtn {
+                cursor: pointer;
+            }*/
+            </style>
+            <div id="chatsendcontainer">
+                <img id="chatsendbtn" onclick="sendMessage()">
+            </div>
+        </div>
+        <div id="DebugSide" style="
+        width: fit-content;
+        height: fit-content;
+        background-color: transparent;
+        cursor: var(--cursor2);
+        display: block;
+        ">
+            <div id="game-console" style="
         position: absolute;
         top: 0px;
-        right: 10px;
+        right: 0px;
         width: 420px;
         height: 200px;
         background: rgba(0, 0, 0, 0.7);
@@ -42,57 +124,64 @@
         overflow-y: auto;
         border: 1px solid #333;
         z-index: 1000;
-        cursor: text;
+        cursor: var(--cursor1);
         display: block
     ">Initializing BOBLOX Screen Console...</div>
-        <div id="matchmaker-ui" style="
-    position: absolute;
-    top: 221px;
-    right: 10px;
-    width: 416px;
-    background: rgba(0, 0, 0, 0.7);
-    border: 1px solid #444;
-    padding: 12px;
-    font-family: monospace;
-    z-index: 1000;
-">
-            <div
-                style="color: #FFF; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 4px;">
-                BOBLOX MULTIPLAYER PANEL
-            </div>
-
-            <!-- Action Layer 1: Host a Lobby Configurations -->
-            <div style="margin-bottom: 14px; background: rgba(255,255,255,0.05); padding: 8px; border: 1px solid #222;">
-                <div style="color: #AAA; font-size: 11px; margin-bottom: 4px;">HOST A SERVER</div>
-                <input type="text" id="input-server-name" placeholder="Enter Server Name (e.g. My Cool Map)"
-                    style="width: 95%; padding: 4px; margin-bottom: 6px; background: #222; color: #FFF; border: 1px solid #444;">
-                <button id="btn-create-room"
-                    style="width: 100%; padding: 6px; cursor: pointer; font-weight: bold;">Create & List Lobby</button>
-                <div id="display-room-code" style="color: #00BCD4; margin-top: 6px; display: none; font-size: 13px;">
-                    Active Code: <span id="txt-room-code"
-                        style="font-weight: bold; background: #222; padding: 2px 6px; border: 1px solid #333;"></span>
-                </div>
-            </div>
-
-            <!-- Action Layer 2: Public Cloud Server Browser List -->
-            <div style="background: rgba(255,255,255,0.05); padding: 8px; border: 1px solid #222;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <div style="color: #AAA; font-size: 11px;">PUBLIC LOBBIES (CLOUD REPOSITORY)</div>
-                    <button id="btn-refresh-servers" style="padding: 2px 8px; cursor: pointer; font-size: 11px;">🔄
-                        Refresh</button>
-                </div>
-
-                <!-- The Scrolling Container Segment where active listings append dynamically -->
-                <div id="server-list-container" style="
-            width: 98%;
-            height: 160px;
-            background: #111;
-            border: 1px solid #333;
-            overflow-y: auto;
-            padding: 4px 0px;
+            <div id="matchmaker-ui" style="
+            position: absolute;
+            top: 221px;
+            right: 0px;
+            width: 416px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #444;
+            padding: 12px;
+            font-family: monospace;
+            z-index: 1000;
         ">
-                    <div style="color: #555; text-align: center; margin-top: 65px; font-size: 12px;">Click Refresh to
-                        load active servers...</div>
+                <div
+                    style="color: #FFF; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 4px;">
+                    BOBLOX MULTIPLAYER PANEL
+                </div>
+
+                <!-- Action Layer 1: Host a Lobby Configurations -->
+                <div
+                    style="margin-bottom: 14px; background: rgba(255,255,255,0.05); padding: 8px; border: 1px solid #222;">
+                    <div style="color: #AAA; font-size: 11px; margin-bottom: 4px;">HOST A SERVER</div>
+                    <input type="text" id="input-server-name" placeholder="Enter Server Name (e.g. My Cool Map)"
+                        style="width: 95%; padding: 4px; margin-bottom: 6px; background: #222; color: #FFF; border: 1px solid #444;">
+                    <button id="btn-create-room"
+                        style="width: 100%; padding: 6px; cursor: var(--cursor2); font-weight: bold;">Create & List
+                        Lobby</button>
+                    <div id="display-room-code"
+                        style="color: #00BCD4; margin-top: 6px; display: none; font-size: 13px;">
+                        Active Code: <span id="txt-room-code"
+                            style="font-weight: bold; background: #222; padding: 2px 6px; border: 1px solid #333;"></span>
+                    </div>
+                </div>
+
+                <!-- Action Layer 2: Public Cloud Server Browser List -->
+                <div style="background: rgba(255,255,255,0.05); padding: 8px; border: 1px solid #222;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <div style="color: #AAA; font-size: 11px;">PUBLIC LOBBIES (CLOUD REPOSITORY)</div>
+                        <button id="btn-refresh-servers"
+                            style="padding: 2px 8px; cursor: var(--cursor2); font-size: 11px;">Refresh</button>
+                    </div>
+
+                    <!-- The Scrolling Container Segment where active listings append dynamically -->
+                    <div id="server-list-container" style="
+                    width: 98%;
+                    height: 160px;
+                    background: #111;
+                    border: 1px solid #333;
+                    overflow-y: auto;
+                    padding: 4px 0px;
+                ">
+                        <div style="color: #555; text-align: center; margin-top: 65px; font-size: 12px;">Click Refresh
+                            to
+                            load active servers...
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -405,6 +494,11 @@
 
 
     <script>
+        let chatBackground = document.getElementById("ChatBox")
+        function DrawMessage(str) {
+            chatBackground.innerHTML += `<div class="chatmessage">${str}</div>`
+        }
+
         // A safe helper function to generate a cryptographic UUID string v4 natively
         function generateEngineUUID() {
             try {
@@ -478,12 +572,17 @@
                 remotePlayers[remoteSender].y = packet.y;                 // Character Y Coordinate vector
                 remotePlayers[remoteSender].sx = packet.sx;               // Remote World Scroll Camera offset variable
                 remotePlayers[remoteSender].state = packet.state;         // Target active keyframe rendering frame pointer
-                remotePlayers[remoteSender].g = packet.g;       // Current game
-                remotePlayers[remoteSender].s = packet.s;       // avatar scale
-                remotePlayers[remoteSender].m = packet.m;   //mirrored anim
-                remotePlayers[remoteSender].lastUpdate = Date.now();       // Local update clock timestamp marker
+                remotePlayers[remoteSender].g = packet.g;                 // Current game
+                remotePlayers[remoteSender].s = packet.s;                 // Avatar scale
+                remotePlayers[remoteSender].m = packet.m;                 // Mirror player?
+                remotePlayers[remoteSender].n = packet.n;                 // Name
+                remotePlayers[remoteSender].lastUpdate = Date.now();      // Local update clock timestamp marker
                 //console.log("Parsed packet")
+            } else if (packet.type === "CHAT") {
+                console.log(String(packet.n) + ": " + String(packet.text))
+                DrawMessage(String(packet.n) + ": " + String(packet.text))
             }
+
         };
 
         // Replace these with your actual keys from your Supabase panel project dashboard
@@ -599,7 +698,11 @@
         };
 
 
+        function isFocused(obj) {
+            return document.activeElement === (obj || canvas);
+        }
 
+        let chatContainer = document.getElementById("chatCountainer")
 
         let config = { //default config
             HeadCol: "#fe0",
@@ -610,7 +713,8 @@
             RLegCol: "#3c0",
             Face: "Happy",
             ShowFPS: true,
-            Debug: true
+            Debug: true,
+            Name: "Guest",
         };
 
         for (let key in config) { //overwrite config with localstorage
@@ -648,29 +752,26 @@
         window.addEventListener("keydown", (event) => keysdown.add(event.key));
         window.addEventListener("keyup", (event) => keysdown.delete(event.key));
 
+        window.addEventListener("blur", () => keysdown.clear());
+
         function loadImage(Image, TextureName) {
             Image.src = (typeof IMAGES !== 'undefined' && IMAGES[TextureName]) ? IMAGES[TextureName] : `./Textures/${TextureName}`;
         }
+        const sendchatbtn = document.getElementById("chatsendbtn")
+        loadImage(sendchatbtn, "GoogleMaterialPlane.png")
 
         const cursor = new Image(), cursorHov = new Image()
+        const root = document.documentElement;
         loadImage(cursor, "White.png")
         loadImage(cursorHov, "Black.png")
-        //cursor.src = "./Textures/White.png"
-        //cursorHov.src = "./Textures/Black.png"
 
-        function drawCursor(isHovering, draw) {
-            if (!draw) { return } //skip drawing if draw is false
-            const currentImg = isHovering ? cursorHov : cursor; //sets the active cursor texture based on hover status
-
-            // Only draw if the browser has finished reading the image file dimensions
-            if (currentImg.naturalWidth > 0) {
-                ctx.drawImage(
-                    currentImg,
-                    mousex - currentImg.naturalWidth / 2,
-                    mousey - currentImg.naturalHeight / 2
-                );
-            }
+        function loadImagePath (TextureName) {
+            return (typeof IMAGES !== 'undefined' && IMAGES[TextureName]) ? IMAGES[TextureName] : `./Textures/${TextureName}`;
         }
+        root.style.setProperty('--cursor1', `url('${loadImagePath("White.png")}'), default`);
+        root.style.setProperty('--cursor2', `url('${loadImagePath("Black.png")}'), pointer`); // Wait, see below!
+        //cursor.src = "./Textures/White.png"
+        //cursorHov.src = ".    /Textures/Black.png"
 
         function drawRectangle(X, Y, Width, Height, Color) {
             ctx.fillStyle = Color
@@ -1035,40 +1136,76 @@
         }
 
         let EscapeMenuOpen = false
+        const inputbar = document.getElementById("chatinput")
+        let Currentgame = 0
+        function sendMessage() {
+            if (!inputbar.value) {return}
+            //logic will be up here
+            window.cldelta.broadcast({
+                type: "CHAT",
+                text: inputbar.value,
+                n: config.Name,
+            });
+
+            DrawMessage(config.Name + ": " + inputbar.value)
+
+            //clearing and focusing canvas
+            inputbar.value = ""
+            canvas.focus()
+        }
 
         //click detection
         canvas.addEventListener("click", (event) => {
             if (MouseHover === null) {
                 EscapeMenuOpen = false
             }
-            if (MouseHover == "Logo") {
-                window.open("https://github.com/taxiePurrs/BobloxJs", '_blank').focus();
-            } else if (MouseHover == "Tycoonicon") {
-                Currentgame = 1
-            } else if (MouseHover == "OpenEscape") {
-                EscapeMenuOpen = !EscapeMenuOpen
-            } else if (MouseHover == "Leave") {
-                Currentgame = 0
-            } else if (MouseHover == "OpenChat") {
-                chatopen = !chatopen
+            if (isFocused(canvas)) {
+                if (MouseHover == "Logo") {
+                    window.open("https://github.com/taxiePurrs/BobloxJs", '_blank').focus();
+                } else if (MouseHover == "Tycoonicon") {
+                    Currentgame = 1
+                } else if (MouseHover == "OpenEscape") {
+                    EscapeMenuOpen = !EscapeMenuOpen
+                } else if (MouseHover == "Leave") {
+                    Currentgame = 0
+                } else if (MouseHover == "OpenChat") {
+                    chatopen = !chatopen
+                } else if (MouseHover == "SendChat") {
+                    sendMessage()
+                }
             }
         })
 
+
         const debugcontainer = document.getElementById("DebugSide")
         window.addEventListener("keydown", (event) => {
-            if (event.key == "m") {
-                if (debugcontainer.style.display == "block") {
-                    debugcontainer.style.display = "none"
-                } else {
-                    debugcontainer.style.display = "block"
+            if (event.key == "Tab") {
+                event.preventDefault()
+
+                if (isFocused(canvas)) {
+                    if (debugcontainer.style.display == "block") {
+                        debugcontainer.style.display = "none"
+                    } else {
+                        debugcontainer.style.display = "block"
+                    }
                 }
+            } else if (event.key == "Enter" && isFocused(inputbar)) {
+                sendMessage()
+            } else if (event.code == "Slash" && Currentgame != 0 && isFocused(canvas) && !EscapeMenuOpen) {
+                event.preventDefault()
+                chatopen = true
+                chatContainer.style.display = "block"
+                inputbar.focus()
+            } else if (event.key == "Escape" && Currentgame != 0) {
+                event.preventDefault()
+                EscapeMenuOpen = !EscapeMenuOpen
             }
         });
 
         //initialize variables for game loop
 
         let escapemenuY = 1920
-        let Currentgame = 0
+
         let currentparty = 0
         let prevgame = 0
         let animationClock = 0
@@ -1136,15 +1273,13 @@
             // Clear out loading text layout indicators entirely
             serverListContainer.innerHTML = "";
 
-            if (availableLobbies.length === 0) {
-                serverListContainer.innerHTML = '<div style="color: #666; text-align: center; margin-top: 65px; font-size: 12px;">No active lobbies found.</div>';
-                return;
-            }
 
+            let trulyavailablelobbies = 0
             // Loop through the data and draw clickable connection rows inside the scrolling view box
             availableLobbies.forEach(serverRow => {
                 // Skip listing yourself in your own browser list!
                 if (serverRow.room_code === window.cldelta.name) return;
+                trulyavailablelobbies += 1
 
                 const serverItem = document.createElement('div');
                 serverItem.style.cssText = `
@@ -1169,13 +1304,17 @@
                 color: #000;
                 border: none;
                 font-weight: bold;
-                cursor: pointer;
+                cursor: var(--cursor2);
                 font-family: monospace;
             ">JOIN</button>
         `;
 
                 serverListContainer.appendChild(serverItem);
             });
+            if (trulyavailablelobbies === 0) {
+                serverListContainer.innerHTML = '<div style="color: #666; text-align: center; margin-top: 65px; font-size: 12px;">No active lobbies found.</div>';
+                return;
+            }
 
             // Capture all newly rendered JOIN buttons and attach P2P link triggers
             const joinButtons = document.querySelectorAll('.join-lobby-btn');
@@ -1255,11 +1394,13 @@
         let Chaticosend = new Image()
         loadImage(Chaticosend, "GoogleMaterialPlane.png")
 
-        const inputbar = document.getElementById("chatinput")
-
         //some HomeMenu Textures and assets
         let tycoonico = new Image()
         loadImage(tycoonico, "TycoonIcon.png")
+
+        window.addEventListener("beforeunload", (event) => {
+            saveConfigValue("Name", config.Name)
+        });
 
         function gameLoop(currentTime) {
             let dt = (currentTime - lastTime) / 1000;
@@ -1290,10 +1431,13 @@
                 animframe = 0
             } else {
                 PlrY += yvel * dt
-                if (keysdown.has("ArrowLeft")) { leftrightbias -= 1 }
-                if (keysdown.has("a")) { leftrightbias -= 1 }
-                if (keysdown.has("ArrowRight")) { leftrightbias += 1 }
-                if (keysdown.has("d")) { leftrightbias += 1 }
+                let canvasfocus = isFocused(canvas)
+                if (canvasfocus) {
+                    if (keysdown.has("ArrowLeft")) { leftrightbias -= 1 }
+                    if (keysdown.has("a")) { leftrightbias -= 1 }
+                    if (keysdown.has("ArrowRight")) { leftrightbias += 1 }
+                    if (keysdown.has("d")) { leftrightbias += 1 }
+                }
 
                 if (leftrightbias > 0) { facingleft = false }
                 if (leftrightbias < 0) { facingleft = true }
@@ -1345,7 +1489,7 @@
                 if (PlrY >= GameDataLoaded.floor) {
                     yvel = 0
                     PlrY = GameDataLoaded.floor
-                    if (keysdown.has("w") || keysdown.has("ArrowUp")) {
+                    if (canvasfocus && (keysdown.has("w") || keysdown.has("ArrowUp"))) {
                         yvel = -Size * (jumppower / 2)
                         animationClock = 0.1
                         characterState = "Airborne"
@@ -1402,13 +1546,13 @@
                     mouseHitbox(235, 120, 240, 240, "Tycoonicon")
                 }
 
-                inputbar.style.display = "none"
+                chatContainer.style.display = "none"
             } else {
                 circularMouseHitbox(35, 35, 25, "OpenEscape")
                 //draw the Boblox escape menu button
                 drawRoundedRectangle(10, 10, 50, 50, 25, (MouseHover == "OpenEscape" && !EscapeMenuOpen) ? "#9999" : "#0009")
                 ctx.drawImage(Bico, 10, 10)
-                
+
 
                 //draw the chat button
                 circularMouseHitbox(95, 35, 25, "OpenChat")
@@ -1417,18 +1561,19 @@
 
                 if (chatopen && !EscapeMenuOpen) {
                     //chat background
-                    drawRoundedRectangle(10, 70, 480, 360, 25, "#0009")
+                    //drawRoundedRectangle(10, 70, 480, 360, 25, "#0009")
 
                     //chat input
-                    drawRoundedRectangle(10, 20+360, 480, 50, 25, "#2229")
-                    inputbar.style.display = "block"
+                    //drawRoundedRectangle(10, 20 + 360, 480, 50, 25, "#2229")
+                    chatContainer.style.display = "block"
 
                     //chat send
-                    circularMouseHitbox(-15+480, 45+360, 25, "SendChat")
-                    drawRoundedRectangle(-40+480, 20+360, 50, 50, 25, (MouseHover == "SendChat") ? "#09f9" : "#9999")
-                    ctx.drawImage(Chaticosend, -30+480, 30+360)
+                    //circularMouseHitbox(-15 + 480, 45 + 360, 25, "SendChat")
+                    //console.log(inputbar.value)
+                    //drawRoundedRectangle(-40 + 480, 20 + 360, 50, 50, 25, (MouseHover == "SendChat" && inputbar.value) ? "#09f9" : "#9999")
+                    //ctx.drawImage(Chaticosend, -30 + 480, 30 + 360)
                 } else {
-                    inputbar.style.display = "none"
+                    chatContainer.style.display = "none"
                 }
 
                 //draw the escape menu
@@ -1448,7 +1593,7 @@
 
 
             //draw the cursor
-            drawCursor((!(MouseHover == null || MouseHover == "EscapeBackground")), mouseOnScreen)
+            canvas.style.cursor = !(MouseHover == null || MouseHover == "EscapeBackground") ? "var(--cursor2)" : "var(--cursor1)"
 
             if (config.ShowFPS) {
                 drawText(
@@ -1489,6 +1634,7 @@
                     sx: Scrollx,
                     s: Size,
                     m: facingleft,
+                    n: config.Name,
                     state: safeFramePacket // Drops your nested skeletal table cleanly into the payload
                 });
 
