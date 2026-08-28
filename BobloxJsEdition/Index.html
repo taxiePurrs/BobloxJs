@@ -12,9 +12,19 @@
         .chatmessage {
             color: white;
             font-family: Arial;
-            white-space: normal; 
-            overflow-wrap: break-word; 
-            word-break: break-word; 
+            white-space: normal;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+
+        .join-lobby-btn {
+            padding: 4px 10px;
+            background: #00BCD4;
+            color: #000;
+            border: none;
+            font-weight: bold;
+            cursor: var(--cursor2);
+            font-family: monospace;
         }
     </style>
 </head>
@@ -118,7 +128,7 @@
         display: none;
         ">
             <div id="game-console" style="
-        position: absolute;
+                position: absolute;
         top: 0px;
         right: 0px;
         width: 420px;
@@ -199,13 +209,15 @@
     <script>
         (function () {
 
-            const screenConsole = document.getElementById('game-console');
+            const screenConsole = document.getElementById('game-console'); //fetch the gui console 
+
+            //define the original outputs for the cosole
             const originalLog = console.log;
             const originalWarn = console.warn;
             const originalError = console.error;
 
+
             function safePrintToScreen(messageArray, color = "#4CAF50") {
-                // This acts as a Lua "pcall" - protecting your entire game thread
                 try {
                     if (!screenConsole) return;
 
@@ -236,14 +248,14 @@
 
             // 1. Intercept Standard Uncaught Errors (e.g., "variable is not defined")
             window.addEventListener("error", (event) => {
-                // Format a clean, human-readable error log for your screen overlay
+                // Format a clean, human-readable error log for the gui console
                 const cleanErrorMsg = `[CRASH AVOIDED] Line ${event.lineno}: ${event.message}`;
 
                 if (typeof console.error === 'function') {
                     console.error(cleanErrorMsg);
                 }
 
-                // Returning TRUE stops the browser from throwing a fatal, script-killing crash!
+                // Returning TRUE stops the browser from throwing a fatal crash
                 return true;
             });
 
@@ -267,12 +279,12 @@
             };
 
             console.warn = function (...args) {
-                originalWarn.apply(console, args);
+                originalWarn.apply(console, args); // Still warn to real hidden console
                 safePrintToScreen(args, "#FF9800");
             };
 
             console.error = function (...args) {
-                originalError.apply(console, args);
+                originalError.apply(console, args); // Guess what this does
                 safePrintToScreen(args, "#FF5252");
             };
         })();
@@ -280,12 +292,13 @@
     </script>
 
     <script>
+        // this is extracted code from CloudLink Delta https://github.com/cloudlink-delta
         (function () {
-            // 1. Establish the fallback layer instantly to protect your 60fps frame loop
+            // 1. Establish the fallback layer instantly to protect the game loop
             class FallbackOfflineLink {
                 constructor() {
                     this.isOnline = false;
-                    console.log("%c[Engine Cloud] Initialized in Local Offline Mode.");
+                    console.log("[Engine Cloud] Initialized in Local Offline Mode.");
                 }
                 broadcast() { /* Drops outbound network ticks silently when offline */ }
                 connectToPeer() { console.warn("Network unavailable. Cannot link players."); return null; }
@@ -331,8 +344,8 @@
                     };
 
 
-                    this.gmsg_state = new Map();
-                    this.pmsg_state = new Map();
+                    this.gmsg_state = new Map(); // Global Message state
+                    this.pmsg_state = new Map(); // Private Message state
                 }
 
                 connect(username) {
@@ -523,14 +536,14 @@
             }
         }
 
-        // Generate and store a unique identifier for this Chromebook instance session
+        // Generate and store a unique identifier for the session
         const MY_UNIQUE_PLAYER_ID = "BOBLOX_" + generateEngineUUID().substring(0, 8); // Uses first 8 characters for readable logs
 
         function startMultiplayerNetwork() {
             if (typeof window.cldelta.connect === 'function') {
                 console.log(`[Engine Cloud] Infrastructure ready. Registering session as: ${MY_UNIQUE_PLAYER_ID}`);
 
-                // Pass your brand new unique UUID token straight into the matchmaker node!
+                // Pass the new UUID token into the matchmaker node
                 window.cldelta.connect(MY_UNIQUE_PLAYER_ID);
             } else {
                 setTimeout(startMultiplayerNetwork, 100);
@@ -553,51 +566,53 @@
             console.log("[NETWORK] Player left the game: " + remotePlayerId);
 
             if (remotePlayers && remotePlayers[remotePlayerId]) {
-                delete remotePlayers[remotePlayerId];
+                delete remotePlayers[remotePlayerId]; //removes players when disconnecting
             }
         };
 
         // A persistent state storage map to track all active network character objects
         let remotePlayers = {};
 
-        // Override the network gateway listener to process your exact required payload variables
+        // Override the network gateway listener to process the required payload variables
         window.routeIncomingGameData = function (payload) {
             const remoteSender = payload.from;
             const packet = payload.data;
 
-            // Filter incoming traffic so you only track characters inside your active sub-server room instance
-            if (packet.type === "LIVEDATA" /*&& packet.g === Currentgame*/) {
+            // Check the data type 
+            if (packet.type === "LIVEDATA") { //player updates
 
-                // If your custom engine hasn't encountered this user entity yet, instantiate their model
+                // If the player hasn't been added yet
                 if (!remotePlayers[remoteSender]) {
                     remotePlayers[remoteSender] = { x: 0, y: 0, sx: 0, state: 0, lastUpdate: Date.now() };
                     console.log(`%c[BOBLOX Engine] Initialized character view loop instance for: ${remoteSender}`);
                 }
 
-                //console.log("Try to parse packet")
+                // Store all critical variables directly into a table
+                remotePlayers[remoteSender].x = packet.x;                 // Character X Coordinate
+                remotePlayers[remoteSender].y = packet.y;                 // Character Y Coordinate
+                remotePlayers[remoteSender].sx = packet.sx;               // Their X scroll
+                remotePlayers[remoteSender].state = packet.state;         // Their current animation data (sending it fully allow custom modded animations that work with base clients)
+                remotePlayers[remoteSender].g = packet.g;                 // The game they're currently in
+                remotePlayers[remoteSender].s = packet.s;                 // Avatar scale in decimal
+                remotePlayers[remoteSender].m = packet.m;                 // Should we mirror the player model when rendering 
+                remotePlayers[remoteSender].n = packet.n;                 // Preffered name for stuff like the chat
+                remotePlayers[remoteSender].lastUpdate = Date.now();      // Heartbeat time for auto unloading
 
-                // Store all critical variables directly into your active engine dictionary state
-                remotePlayers[remoteSender].x = packet.x;                 // Character X Coordinate vector
-                remotePlayers[remoteSender].y = packet.y;                 // Character Y Coordinate vector
-                remotePlayers[remoteSender].sx = packet.sx;               // Remote World Scroll Camera offset variable
-                remotePlayers[remoteSender].state = packet.state;         // Target active keyframe rendering frame pointer
-                remotePlayers[remoteSender].g = packet.g;                 // Current game
-                remotePlayers[remoteSender].s = packet.s;                 // Avatar scale
-                remotePlayers[remoteSender].m = packet.m;                 // Mirror player?
-                remotePlayers[remoteSender].n = packet.n;                 // Name
-                remotePlayers[remoteSender].lastUpdate = Date.now();      // Local update clock timestamp marker
-                //console.log("Parsed packet")
-            } else if (packet.type === "CHAT") {
-                console.log(String(packet.n) + ": " + String(packet.text))
-                if (package.g == Currentgame) {
-                    DrawMessage(String(packet.n) + ": " + String(packet.text))
-                }
+            } else if (packet.type === "CHAT" && package.g == Currentgame) { //check if its a chat packet
+                    DrawMessage(String(packet.n) + ": " + String(packet.text)) //print the chat message if its a chat packet
             }
 
         };
+        
+        /*  
+        ####################################
+        #SUPABASE API FOR AVAILABLE SERVERS#
+        ####################################
+        */
 
-        // Replace these with your actual keys from your Supabase panel project dashboard
+        // supabase API URL
         const SUPABASE_URL = "https://wzcrhodevcelyjxsmdcp.supabase.co";
+        // supabase key, this is not unsafe because its a public anon key
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6Y3Job2RldmNlbHlqeHNtZGNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3MzQ5MjIsImV4cCI6MjEwMzMxMDkyMn0.7wGVjetb2PRM-JcU7lUwn0S3hPT3UlBqc4o2gQweV3k";
 
         const DB_HEADERS = {
@@ -606,10 +621,8 @@
             "Content-Type": "application/json"
         };
 
-        // 1. ROUTINE: Tell the cloud database you are hosting a live game
         let heartbeatIntervalTimer = null;
-
-        // 1. ROUTINE: Tell the cloud database you are hosting a live game
+        // 1. ROUTINE: Notify the supabase servers that the client is hosting a server
         async function registerServerInCloud(roomCode, serverName) {
             try {
                 const payload = {
@@ -618,7 +631,7 @@
                     player_count: 1
                 };
 
-                // First, check if the room already exists in the database
+                // check if the room already exists in the database
                 const checkResponse = await fetch(`${SUPABASE_URL}/rest/v1/active_servers?room_code=eq.${roomCode}`, {
                     method: "GET",
                     headers: DB_HEADERS
@@ -634,7 +647,7 @@
                         body: JSON.stringify({ server_name: serverName, player_count: 1 })
                     });
                 } else {
-                    // If it doesn't exist, create it brand new
+                    // If it doesn't exist, create it
                     response = await fetch(`${SUPABASE_URL}/rest/v1/active_servers`, {
                         method: "POST",
                         headers: DB_HEADERS,
@@ -645,8 +658,7 @@
                 if (response.ok) {
                     console.log("Server published to cloud registry.");
 
-                    // START THE TIMED HEARTBEAT LOOP
-                    // This runs silently in the background every 30 seconds to keep the lobby alive!
+                    // start the heartbeat loop to prevent the server from being removed
                     if (!heartbeatIntervalTimer) {
                         heartbeatIntervalTimer = setInterval(function () {
                             if (window.cldelta.isOnline && isLobbyHost) {
@@ -678,7 +690,7 @@
                 const servers = await response.json();
 
                 console.log(`Fetched ${servers.length} live matching lobbies from database.`);
-                return servers; // Returns an array of live room objects!
+                return servers; // Returns an array of live room objects
             } catch (e) {
                 console.log("Database download failed: " + e.message);
                 return [];
@@ -696,7 +708,7 @@
             } catch (e) { }
         }
 
-        // Automatically fires when a player closes their browser tab or navigates away
+        // Automatically fires when a player closes their browser tab, navigates away or refreshes
         window.onbeforeunload = function () {
             if (isLobbyHost && window.cldelta.name) {
                 // Send a synchronous beacon or rapid request to wipe the server row before closing down
@@ -715,40 +727,45 @@
 
         let chatContainer = document.getElementById("chatCountainer")
 
-        let config = { //default config
-            HeadCol: "#fe0",
-            LArmCol: "#fe0",
-            RArmCol: "#fe0",
-            TorsoCol: "#46f",
-            LLegCol: "#3c0",
-            RLegCol: "#3c0",
-            Face: "Happy",
-            ShowFPS: true,
-            Debug: true,
-            Name: "Guest",
+        let config = { //this is the default config
+            HeadCol: "#fe0",    // Head Color, im unsure if it supports full lenght hexadecimal color
+            LArmCol: "#fe0",    // Left Arm Color
+            RArmCol: "#fe0",    // Right Arm Color
+            TorsoCol: "#46f",   // Torso Color
+            LLegCol: "#3c0",    // Left Leg Color
+            RLegCol: "#3c0",    // Right Leg Color
+            Face: "Happy",      // Prefered face
+            ShowFPS: true,      // Show the fps, i should probably merge this into the debug option
+            Debug: true,        // Unused lol
+            Name: "Guest",      // Preffered name
         };
 
-        for (let key in config) { //overwrite config with localstorage
+        for (let key in config) { // Overwrite the config with localstorage
             const savedValue = localStorage.getItem(key);
             if (savedValue !== null) {
                 config[key] = savedValue;
             }
         }
 
-        function saveConfigValue(key, value) { //save config to localstorage
+        function saveConfigValue(key, value) { // Save a config key to localstorage for future loading
             config[key] = value;
             localStorage.setItem(key, value);
+        }
+
+        function clamp(value, min, max) { // Mimicks the python Math.clamp function
+            return Math.max(min, Math.min(value, max));
         }
 
         let mousex = 0, mousey = 0, mouseOnScreen = false, MouseHover = null
         const canvas = document.getElementById("canvas")
         const ctx = canvas.getContext('2d');
+
         canvas.addEventListener('mousemove', (event) => {
             const rect = canvas.getBoundingClientRect();
 
             // Get the 0-1 ratio and clamp it
-            let xRatio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-            let yRatio = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+            let xRatio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+            let yRatio = clamp((event.clientY - rect.top) / rect.height, 0, 1);
 
             // Assign the calculated pixel integers to your existing variables
             mousex = Math.floor(xRatio * canvas.width);
@@ -773,7 +790,7 @@
 
         const root = document.documentElement;
 
-        function loadImagePath (TextureName) {
+        function loadImagePath(TextureName) {
             return (typeof IMAGES !== 'undefined' && IMAGES[TextureName]) ? IMAGES[TextureName] : `./Textures/${TextureName}`;
         }
         root.style.setProperty('--cursor1', `url('${loadImagePath("White.png")}'), default`);
@@ -1129,9 +1146,7 @@
             //console.log("drew character at"+Date.now())
         }
 
-        function clamp(value, min, max) {
-            return Math.max(min, Math.min(value, max));
-        }
+        
 
         let gamedata = {
             "1": {
@@ -1147,7 +1162,7 @@
         const inputbar = document.getElementById("chatinput")
         let Currentgame = 0
         function sendMessage() {
-            if (!inputbar.value) {return}
+            if (!inputbar.value) { return }
             //logic will be up here
             window.cldelta.broadcast({
                 type: "CHAT",
@@ -1310,15 +1325,7 @@
                 <div style="color: #FFF; font-size: 13px; text-overflow: ellipsis; white-space: nowrap;">${serverRow.server_name}</div>
                 <div style="color: #666; font-size: 10px;">ID: ${serverRow.room_code.substring(0, 12)}...</div>
             </div>
-            <button class="join-lobby-btn" data-code="${serverRow.room_code}" style="
-                padding: 4px 10px;
-                background: #00BCD4;
-                color: #000;
-                border: none;
-                font-weight: bold;
-                cursor: var(--cursor2);
-                font-family: monospace;
-            ">JOIN</button>
+            <button class="join-lobby-btn" data-code="${serverRow.room_code}">JOIN</button>
         `;
 
                 serverListContainer.appendChild(serverItem);
@@ -1432,8 +1439,6 @@
             drawRectangle(0, 0, canvas.width, canvas.height, "#111")
 
             //handle Key inputs
-
-
             if (Currentgame == 0) {
                 PlrX = 123
                 PlrY = 480
@@ -1627,15 +1632,7 @@
                 // 2. Double-check guard: If it's missing or an unready string, pass a default idle structure
                 let safeFramePacket = rawAnimFrame;
                 if (!safeFramePacket || typeof safeFramePacket !== 'object') {
-                    safeFramePacket = {
-                        Head: { rot: 0, x: 0, y: -20 },
-                        LArm: { rot: 0, x: 0, y: 0 },
-                        RArm: { rot: 0, x: 0, y: 0 },
-                        Torso: { rot: 0, x: 0, y: 0 },
-                        LLeg: { rot: 0, x: 0, y: 40 },
-                        RLeg: { rot: 0, x: 0, y: 40 },
-                        Face: "PrefferedSide"
-                    }
+                    safeFramePacket = animationFrames.Idle[0]
                 };
 
                 // 3. Broadcast all required values directly over CloudLink P2P channels
