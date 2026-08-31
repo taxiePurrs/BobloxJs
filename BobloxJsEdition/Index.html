@@ -170,7 +170,7 @@
             height: fit-content;
             background-color: transparent;
             cursor: var(--cursor2);
-            display: block;
+            display: none;
         ">
             <div id="game-console" style="
                 position: absolute;
@@ -188,7 +188,7 @@
                 border: 1px solid #333;
                 z-index: 1000;
                 cursor: var(--cursor1);
-                display: block
+                display: none;
             ">Initializing BOBLOX Screen Console...</div>
             <div id="matchmaker-ui" style="
                 position: absolute;
@@ -842,7 +842,7 @@
 
         const sendchatbtn = document.getElementById("chatsendbtn")
         sendchatbtn.style.backgroundImage = `url('${loadImagePath("UISheet.png")}')`
-        
+
         UISheet.onload = function () {
             sendchatbtn.style.backgroundSize = `${UISheet.width/0.3}% ${UISheet.height/0.3}%`
         }
@@ -850,7 +850,11 @@
 
         const root = document.documentElement;
 
-        root.style.setProperty('--blur', config.BackgroundBlur ? "blur(8px)" : "none")
+        function someconfigsupdate() {
+            root.style.setProperty('--blur', config.BackgroundBlur ? "blur(8px)" : "none")
+        }
+
+        someconfigsupdate()
         root.style.setProperty('--cursor1', `url('${loadImagePath("White.png")}'), default`);
         root.style.setProperty('--cursor2', `url('${loadImagePath("Black.png")}'), pointer`); // Wait, see below!
 
@@ -1247,6 +1251,13 @@
                     EscapeMenuOpen = !EscapeMenuOpen
                 } else if (MouseHover == "OpenChat") {
                     chatopen = !chatopen
+                } else if (MouseHover == "HomeTab") {
+                    menu = 0
+                } else if (MouseHover == "SettingsTab") {
+                    menu = 1
+                } else if (MouseHover == "ToggleBlur") {
+                    config.BackgroundBlur = !config.BackgroundBlur
+                    someconfigsupdate()
                 }
             }
         })
@@ -1610,10 +1621,20 @@
                 drawSpriteSheet(UISheet, 10, 10, 60, 0, 315, 90)
                 mouseHitbox(10, 10, 315, 90, "Logo") //clickbox redirects to github repo
 
-                //draw games on home menu
+                drawSpriteSheet(UISheet, 335, 70, 30, 60, 30, 30)
+                circularMouseHitbox(350, 85, 15, "HomeTab")
+
+                drawSpriteSheet(UISheet, 365, 70, 0, 60, 30, 30)
+                circularMouseHitbox(380, 85, 15, "SettingsTab")
+
                 if (menu == 0) {
+                    //draw games on home menu
                     ctx.drawImage(tycoonico, 235, 120, 240, 240)
                     mouseHitbox(235, 120, 240, 240, "Tycoonicon")
+                } else if (menu == 1) {
+                    drawSpriteSheet(UISheet, 235, 120, 380, config.BackgroundBlur ? 30 : 0, 60, 30)
+                    mouseHitbox(235, 120, 60, 30, "ToggleBlur")
+                    drawText("Enable Ui blur", 295, 135, 30, "Arial", "#fff")
                 }
 
                 if (chatmenudisplay !== "none") { // check and update if its not set to none
