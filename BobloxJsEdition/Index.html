@@ -7,6 +7,7 @@
         :root {
             --cursor1: default;
             --cursor2: pointer;
+            --blur: none;
         }
 
         .chatmessage {
@@ -26,6 +27,44 @@
             cursor: var(--cursor2);
             font-family: monospace;
         }
+
+        #escapemenu {
+            position: inherit;
+            width: 66.666%;
+            height: 77.777%;
+            background-color: #0009;
+            display: none;
+            left: 16.666%;
+            top: 11.111%;
+            backdrop-filter: var(--blur);
+            border-radius: 7.8125% / 11.904761904%;
+        }
+
+        #leave {
+            position: inherit;
+            width: 42.1875%;
+            height: 11.904761904%;
+            border-radius: 9999px;
+            bottom: 5.952380952%;
+            left: 3.90625%;
+            background-color: #9999;
+            color: white;
+            container-type: size;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: var(--cursor1);
+        }
+
+        #leave span {
+            font-size: 50cqh; 
+            font-family: Arial;
+        }
+
+        #leave:hover {
+            background-color: #09f9;
+            cursor: var(--cursor2);
+        }
     </style>
 </head>
 
@@ -42,15 +81,20 @@
         display: block;
     ">
         <canvas id="canvas" width="1920" height="1080" tabindex="0" style="
-        width: 100vw;
-        height: 56.25vw; /* 9/16 * 100 */
-        max-height: 100vh;
-        max-width: 177.78vh; /* 16/9 * 100 */
-    ">
+            width: 100vw;
+            height: 56.25vw; /* 9/16 * 100 */
+            max-height: 100vh;
+            max-width: 177.78vh; /* 16/9 * 100 */
+        ">
         </canvas>
+        <div id="escapemenu" tabindex="-1" onmousedown="event.preventDefault();">
+            <div id="leave" tabindex="-1" onmousedown="event.preventDefault();">
+                <span>Leave</span>
+            </div>
+        </div>
         <div id="chatCountainer" style="
             background-color: #0009;
-            backdrop-filter: blur(8px);
+            backdrop-filter: var(--blur);
             position: inherit;
             display: none;
             border-radius: 5.21% / 6.94%;
@@ -105,7 +149,7 @@
                     height: 100%;
                     width: 100%;
                     transform: scale(0.6);
-                    
+
                     background-repeat: no-repeat;
                     background-size: 200% 200%;
                     background-position: 0% 0%;
@@ -135,7 +179,7 @@
                 width: 420px;
                 height: 200px;
                 background: rgba(0, 0, 0, 0.7);
-                backdrop-filter: blur(8px);
+                backdrop-filter: var(--blur);
                 color: #4CAF50;
                 font-family: monospace;
                 font-size: 14px;
@@ -152,7 +196,7 @@
                 right: 0px;
                 width: 416px;
                 background: rgba(0, 0, 0, 0.7);
-                backdrop-filter: blur(8px);
+                backdrop-filter: var(--blur);
                 border: 1px solid #444;
                 padding: 12px;
                 font-family: monospace;
@@ -205,6 +249,7 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
     <script>
@@ -600,11 +645,11 @@
                 remotePlayers[remoteSender].lastUpdate = Date.now();      // Heartbeat time for auto unloading
 
             } else if (packet.type === "CHAT" && package.g == Currentgame) { //check if its a chat packet
-                    DrawMessage(String(packet.n) + ": " + String(packet.text)) //print the chat message if its a chat packet
+                DrawMessage(String(packet.n) + ": " + String(packet.text)) //print the chat message if its a chat packet
             }
 
         };
-        
+
         /*  
         ####################################
         #SUPABASE API FOR AVAILABLE SERVERS#
@@ -739,6 +784,7 @@
             ShowFPS: true,      // Show the fps, i should probably merge this into the debug option
             Debug: true,        // Unused lol
             Name: "Guest",      // Preffered name
+            BackgroundBlur: true,     // Toggle background blur
         };
 
         for (let key in config) { // Overwrite the config with localstorage
@@ -788,7 +834,7 @@
         }
 
         let topspritesheet = new Image()
-        
+
         loadImage(topspritesheet, "topbarSheet.png")
 
         function loadImagePath(TextureName) {
@@ -800,6 +846,7 @@
 
         const root = document.documentElement;
 
+        root.style.setProperty('--blur', config.BackgroundBlur ? "blur(8px)" : "none")
         root.style.setProperty('--cursor1', `url('${loadImagePath("White.png")}'), default`);
         root.style.setProperty('--cursor2', `url('${loadImagePath("Black.png")}'), pointer`); // Wait, see below!
 
@@ -1155,7 +1202,7 @@
             //console.log("drew character at"+Date.now())
         }
 
-        
+
 
         let gamedata = {
             "1": {
@@ -1199,14 +1246,14 @@
                     Currentgame = 1
                 } else if (MouseHover == "OpenEscape") {
                     EscapeMenuOpen = !EscapeMenuOpen
-                } else if (MouseHover == "Leave") {
-                    Currentgame = 0
                 } else if (MouseHover == "OpenChat") {
                     chatopen = !chatopen
-                } else if (MouseHover == "SendChat") {
-                    sendMessage()
                 }
             }
+        })
+
+        document.getElementById("leave").addEventListener("click", (e) => {
+            Currentgame = 0
         })
 
 
@@ -1417,6 +1464,7 @@
         //save configs
         window.addEventListener("beforeunload", (event) => {
             saveConfigValue("Name", config.Name)
+            saveConfigValue("BackgroundBlur", config.BackgroundBlur)
         });
 
         /*
@@ -1426,6 +1474,9 @@
         */
 
         let chatmenudisplay = "none"
+
+        let escapemenudisplay = "block"
+        let escapemenu = document.getElementById("escapemenu")
 
         function gameLoop(currentTime) {
             let dt = (currentTime - lastTime) / 1000;
@@ -1557,7 +1608,7 @@
                 EscapeMenuOpen = false
                 escapemenuY = 1080
                 //draw the overlaid boblox javascript edition logo
-                ctx.drawImage(NotInGameOverlay, 0, 0)
+                ctx.drawImage(NotInGameOverlay, 10, 10)
                 mouseHitbox(10, 10, 315, 94, "Logo") //clickbox redirects to github repo
 
                 //draw games on home menu
@@ -1569,12 +1620,14 @@
                 if (chatmenudisplay !== "none") { // check and update if its not set to none
                     chatContainer.style.display = chatmenudisplay = "none"
                 }
+                if (escapemenudisplay !== "none") { // check and update if its not set to none
+                    escapemenu.style.display = escapemenudisplay = "none"
+                }
             } else {
-                
+
                 if ((chatopen && !EscapeMenuOpen ? "block" : "none" /* gets the target display type */) !== chatmenudisplay) {
                     chatContainer.style.display = chatmenudisplay = chatmenudisplay === "none" ? "block" : "none"; // update if outdated
                 }
-
 
                 //draw the Boblox escape menu button
                 circularMouseHitbox(35, 35, 25, "OpenEscape")
@@ -1588,16 +1641,17 @@
                 drawSpriteSheet(topspritesheet, 80, 20, 30, chatopen ? 30 : 0, 30, 30)
 
                 //draw the escape menu
+                if ((escapemenuY < 1080 ? "block" : "none" /* gets the target display type */) !== escapemenudisplay) {
+                    escapemenu.style.display = escapemenudisplay = escapemenudisplay === "none" ? "block" : "none"; // update if outdated
+                }
                 if (escapemenuY < 1080) {
                     if (EscapeMenuOpen) {
                         MouseHover = null
                         mouseHitbox((canvas.width - 1280) / 2, escapemenuY, 1280, 840, "EscapeBackground")
                     }
-                    drawRoundedRectangle((canvas.width - 1280) / 2, escapemenuY, 1280, 840, 100, "#0009")
+                    escapemenu.style.top = (escapemenuY/canvas.height*100)+"%"
 
                     mouseHitbox((canvas.width - 1180) / 2, escapemenuY + 690, 540, 100, "Leave")
-                    drawRoundedRectangle((canvas.width - 1180) / 2, escapemenuY + 690, 540, 100, 100, ((MouseHover == "Leave") ? "#09f9" : "#9999"))
-                    drawText("Leave", (canvas.width - 640) / 2, escapemenuY + 740, 50, "Arial", "#fff", "center")
                 }
             }
 

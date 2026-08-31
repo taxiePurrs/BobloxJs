@@ -26,5 +26,5 @@ Escape menu
     Resume button
     Player List
 
-Chat
+Optimize Optimize Optimize (i need to learn how to optimize)
 </pre>
