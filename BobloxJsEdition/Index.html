@@ -170,7 +170,7 @@
             height: fit-content;
             background-color: transparent;
             cursor: var(--cursor2);
-            display: none;
+            display: block;
         ">
             <div id="game-console" style="
                 position: absolute;
@@ -833,16 +833,20 @@
             Image.src = (typeof IMAGES !== 'undefined' && IMAGES[TextureName]) ? IMAGES[TextureName] : `./Textures/${TextureName}`;
         }
 
-        let UISheet = new Image()
-
-        loadImage(UISheet, "UISheet.png")
-
         function loadImagePath(TextureName) {
             return (typeof IMAGES !== 'undefined' && IMAGES[TextureName]) ? IMAGES[TextureName] : `./Textures/${TextureName}`;
         }
+        
+        let UISheet = new Image()
+        loadImage(UISheet, "UISheet.png")  
 
         const sendchatbtn = document.getElementById("chatsendbtn")
         sendchatbtn.style.backgroundImage = `url('${loadImagePath("UISheet.png")}')`
+        
+        UISheet.onload = function () {
+            sendchatbtn.style.backgroundSize = `${UISheet.width/0.3}% ${UISheet.height/0.3}%`
+        }
+        
 
         const root = document.documentElement;
 
