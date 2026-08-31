@@ -52,7 +52,7 @@
             background-color: #0009;
             backdrop-filter: blur(8px);
             position: inherit;
-            display: block;
+            display: none;
             border-radius: 5.21% / 6.94%;
             left: 0.520833333%;
             top: 6.48148%;
@@ -60,33 +60,33 @@
             height: 33.333%;
         ">
             <div id="ChatBox" style="
-            box-sizing: border-box;
-            padding: 10px;
-            padding-bottom: 0px;
-            background-color: transparent;
-            position: inherit;
-            left: 0px;
-            top: 0px;
-            width: 100%;
-            height: 86.111%;
-            border-radius: 5.21% 5.21% 0% 0% / 8.06% 8.06% 0% 0%;
-            cursor: var(--cursor1);
+                box-sizing: border-box;
+                padding: 10px;
+                padding-bottom: 0px;
+                background-color: transparent;
+                position: inherit;
+                left: 0px;
+                top: 0px;
+                width: 100%;
+                height: 86.111%;
+                border-radius: 5.21% 5.21% 0% 0% / 8.06% 8.06% 0% 0%;
+                cursor: var(--cursor1);
             "></div>
             <input placeholder='press "/" to chat' id="chatinput" type="text" aria-multiline="false" style="
-            box-sizing: border-box;
-            padding-inline-start: 2.0833%;
-            padding-inline-end: 10.4166%;
-            position: inherit;
-            border-radius: 1000px;
-            bottom: 0px;
-            left: 0px;
-            width: 100%;
-            height: 13.888%;
-            outline-style: none;
-            border-style: none;
-            background-color: #2229;
-            color: #FFF;
-        ">
+                box-sizing: border-box;
+                padding-inline-start: 2.0833%;
+                padding-inline-end: 10.4166%;
+                position: inherit;
+                border-radius: 1000px;
+                bottom: 0px;
+                left: 0px;
+                width: 100%;
+                height: 13.888%;
+                outline-style: none;
+                border-style: none;
+                background-color: #2229;
+                color: #FFF;
+            ">
             <style>
                 #chatsendcontainer {
                     right: 0px;
@@ -103,7 +103,12 @@
                     bottom: 0px;
                     position: inherit;
                     height: 100%;
+                    width: 100%;
                     transform: scale(0.6);
+                    
+                    background-repeat: no-repeat;
+                    background-size: 200% 200%;
+                    background-position: 0% 0%;
                 }
 
                 #chatsendcontainer:hover {
@@ -111,52 +116,48 @@
                     cursor: var(--cursor2);
 
                 }
-
-                /*#chatsendbtn {
-                cursor: pointer;
-            }*/
             </style>
             <div id="chatsendcontainer">
-                <img id="chatsendbtn" onclick="sendMessage()">
+                <div id="chatsendbtn" onclick="sendMessage()"></div>
             </div>
         </div>
         <div id="DebugSide" style="
-        width: fit-content;
-        height: fit-content;
-        background-color: transparent;
-        cursor: var(--cursor2);
-        display: none;
+            width: fit-content;
+            height: fit-content;
+            background-color: transparent;
+            cursor: var(--cursor2);
+            display: none;
         ">
             <div id="game-console" style="
                 position: absolute;
-        top: 0px;
-        right: 0px;
-        width: 420px;
-        height: 200px;
-        background: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(8px);
-        color: #4CAF50;
-        font-family: monospace;
-        font-size: 14px;
-        padding: 10px;
-        overflow-y: auto;
-        border: 1px solid #333;
-        z-index: 1000;
-        cursor: var(--cursor1);
-        display: block
-    ">Initializing BOBLOX Screen Console...</div>
+                top: 0px;
+                right: 0px;
+                width: 420px;
+                height: 200px;
+                background: rgba(0, 0, 0, 0.7);
+                backdrop-filter: blur(8px);
+                color: #4CAF50;
+                font-family: monospace;
+                font-size: 14px;
+                padding: 10px;
+                overflow-y: auto;
+                border: 1px solid #333;
+                z-index: 1000;
+                cursor: var(--cursor1);
+                display: block
+            ">Initializing BOBLOX Screen Console...</div>
             <div id="matchmaker-ui" style="
-            position: absolute;
-            top: 221px;
-            right: 0px;
-            width: 416px;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
-            border: 1px solid #444;
-            padding: 12px;
-            font-family: monospace;
-            z-index: 1000;
-        ">
+                position: absolute;
+                top: 221px;
+                right: 0px;
+                width: 416px;
+                background: rgba(0, 0, 0, 0.7);
+                backdrop-filter: blur(8px);
+                border: 1px solid #444;
+                padding: 12px;
+                font-family: monospace;
+                z-index: 1000;
+            ">
                 <div
                     style="color: #FFF; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 4px;">
                     BOBLOX MULTIPLAYER PANEL
@@ -785,18 +786,22 @@
         function loadImage(Image, TextureName) {
             Image.src = (typeof IMAGES !== 'undefined' && IMAGES[TextureName]) ? IMAGES[TextureName] : `./Textures/${TextureName}`;
         }
-        const sendchatbtn = document.getElementById("chatsendbtn")
-        loadImage(sendchatbtn, "GoogleMaterialPlane.png")
 
-        const root = document.documentElement;
+        let topspritesheet = new Image()
+        
+        loadImage(topspritesheet, "topbarSheet.png")
 
         function loadImagePath(TextureName) {
             return (typeof IMAGES !== 'undefined' && IMAGES[TextureName]) ? IMAGES[TextureName] : `./Textures/${TextureName}`;
         }
+
+        const sendchatbtn = document.getElementById("chatsendbtn")
+        sendchatbtn.style.backgroundImage = `url('${loadImagePath("topbarSheet.png")}')`
+
+        const root = document.documentElement;
+
         root.style.setProperty('--cursor1', `url('${loadImagePath("White.png")}'), default`);
         root.style.setProperty('--cursor2', `url('${loadImagePath("Black.png")}'), pointer`); // Wait, see below!
-        //cursor.src = "./Textures/White.png"
-        //cursorHov.src = ".    /Textures/Black.png"
 
         function drawRectangle(X, Y, Width, Height, Color) {
             ctx.fillStyle = Color
@@ -860,6 +865,10 @@
             ctx.drawImage(image, -width / 2, -height / 2, width, height);
 
             ctx.restore();
+        }
+
+        function drawSpriteSheet(img, cx, cy, sx, sy, w, h) {
+            ctx.drawImage(img, sx, sy, w, h, cx, cy, w, h);
         }
 
         function drawComplexImage(image, X, Y, Scale, Degrees, MirrorX) {
@@ -1252,7 +1261,7 @@
         const walkanimspeed = 6
 
         // Grab UI elements
-        // 1. Setup element pointers matching your new HTML elements exactly
+        // 1. Setup element pointers matching the p2p server discovery and creation 
         const btnCreateRoom = document.getElementById('btn-create-room');
         const btnRefreshServers = document.getElementById('btn-refresh-servers');
         const serverListContainer = document.getElementById('server-list-container');
@@ -1285,7 +1294,7 @@
             let typedName = inputServerName.value.trim();
             if (typedName === "") typedName = "A BOBLOX Game Server";
 
-            // Push the row data straight to your public Supabase matrix records!
+            // Push the row data straight to the public Supabase matrix records
             registerServerInCloud(myLobbyCode, typedName);
         };
 
@@ -1293,7 +1302,7 @@
         btnRefreshServers.onclick = async function () {
             serverListContainer.innerHTML = '<div style="color: #888; text-align: center; margin-top: 65px; font-size: 12px;">Querying cloud directory...</div>';
 
-            // Fetch live entries from your database module
+            // Fetch live entries from the database module
             const availableLobbies = await fetchActiveCloudServers();
             console.log(availableLobbies)
 
@@ -1304,29 +1313,29 @@
             let trulyavailablelobbies = 0
             // Loop through the data and draw clickable connection rows inside the scrolling view box
             availableLobbies.forEach(serverRow => {
-                // Skip listing yourself in your own browser list!
+                // Skip listing yourself in the browser list!
                 if (serverRow.room_code === window.cldelta.name) return;
                 trulyavailablelobbies += 1
 
                 const serverItem = document.createElement('div');
                 serverItem.style.cssText = `
                     display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #222;
-            margin: 4px 6px;
-            padding: 6px 10px;
-            border: 1px solid #333;
-            border-left: 3px solid #00BCD4;
-        `;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: #222;
+                    margin: 4px 6px;
+                    padding: 6px 10px;
+                    border: 1px solid #333;
+                    border-left: 3px solid #00BCD4;
+                `;
 
                 serverItem.innerHTML = `
-            <div style="overflow: hidden; max-width: 240px;">
-                <div style="color: #FFF; font-size: 13px; text-overflow: ellipsis; white-space: nowrap;">${serverRow.server_name}</div>
-                <div style="color: #666; font-size: 10px;">ID: ${serverRow.room_code.substring(0, 12)}...</div>
-            </div>
-            <button class="join-lobby-btn" data-code="${serverRow.room_code}">JOIN</button>
-        `;
+                    <div style="overflow: hidden; max-width: 240px;">
+                        <div style="color: #FFF; font-size: 13px; text-overflow: ellipsis; white-space: nowrap;">${serverRow.server_name}</div>
+                        <div style="color: #666; font-size: 10px;">ID: ${serverRow.room_code.substring(0, 12)}...</div>
+                    </div>
+                    <button class="join-lobby-btn" data-code="${serverRow.room_code}">JOIN</button>
+                `;
 
                 serverListContainer.appendChild(serverItem);
             });
@@ -1343,7 +1352,7 @@
                     console.log("Connecting via cloud selection to: " + targetRoomCode);
 
                     isLobbyHost = false;
-                    currentparty = targetRoomCode; // Sync your game room variable context to their room ID
+                    currentparty = targetRoomCode; // Sync the game room variable context to their room ID
 
                     if (typeof window.cldelta.connectToPeer === 'function') {
                         window.cldelta.connectToPeer(targetRoomCode);
@@ -1401,25 +1410,22 @@
 
         let chatopen = false
 
-        let Bico = new Image()
-        loadImage(Bico, "B.png")
-
-        let Chatico = new Image()
-        loadImage(Chatico, "GoogleMaterialChat.png")
-
-        let Chatico2 = new Image()
-        loadImage(Chatico2, "GoogleMaterialChat2.png")
-
-        let Chaticosend = new Image()
-        loadImage(Chaticosend, "GoogleMaterialPlane.png")
-
         //some HomeMenu Textures and assets
         let tycoonico = new Image()
         loadImage(tycoonico, "TycoonIcon.png")
 
+        //save configs
         window.addEventListener("beforeunload", (event) => {
             saveConfigValue("Name", config.Name)
         });
+
+        /*
+        ###########
+        #GAME LOOP#
+        ###########
+        */
+
+        let chatmenudisplay = "none"
 
         function gameLoop(currentTime) {
             let dt = (currentTime - lastTime) / 1000;
@@ -1477,7 +1483,7 @@
                             animframe = 0
                             animationClock = WalkFrameOrder.length / walkanimspeed
                         }
-                        characterState = "Walking"//Change to walking when animation is present
+                        characterState = "Walking"
                         if (animationClock == 0) {
                             animationClock = WalkFrameOrder.length / walkanimspeed
                         }
@@ -1518,7 +1524,7 @@
                     if (animationClock > 0) {
                         animframe = 0
                     } else {
-                        animframe = 1 //change to 1 when fall animation is implemented
+                        animframe = 1
                     }
                     yvel += 1000 * Size * dt
                 }
@@ -1536,14 +1542,10 @@
                 }
 
                 if (p.g == Currentgame) {
-                    let renderX = p.x + p.sx - Scrollx; // Subtracting YOUR local camera scroll value positions them perfectly
+                    let renderX = p.x + p.sx - Scrollx; // Subtracting the local camera scroll value positions
                     let renderY = p.y;
                     drawCharacter(renderX, renderY, p.s, p.state, p.m)
                 }
-                //console.log(renderX)
-                //console.log(p.state)
-                //console.log(renderY)
-                //console.log(p.s)
             }
 
 
@@ -1564,35 +1566,26 @@
                     mouseHitbox(235, 120, 240, 240, "Tycoonicon")
                 }
 
-                chatContainer.style.display = "none"
+                if (chatmenudisplay !== "none") { // check and update if its not set to none
+                    chatContainer.style.display = chatmenudisplay = "none"
+                }
             } else {
-                circularMouseHitbox(35, 35, 25, "OpenEscape")
+                
+                if ((chatopen && !EscapeMenuOpen ? "block" : "none" /* gets the target display type */) !== chatmenudisplay) {
+                    chatContainer.style.display = chatmenudisplay = chatmenudisplay === "none" ? "block" : "none"; // update if outdated
+                }
+
+
                 //draw the Boblox escape menu button
+                circularMouseHitbox(35, 35, 25, "OpenEscape")
                 drawRoundedRectangle(10, 10, 50, 50, 25, (MouseHover == "OpenEscape" && !EscapeMenuOpen) ? "#9999" : "#0009")
-                ctx.drawImage(Bico, 10, 10)
+                drawSpriteSheet(topspritesheet, 20, 20, 0, 30, 30, 30)
 
 
                 //draw the chat button
                 circularMouseHitbox(95, 35, 25, "OpenChat")
                 drawRoundedRectangle(70, 10, 50, 50, 25, (MouseHover == "OpenChat" && !EscapeMenuOpen) ? "#9999" : "#0009")
-                ctx.drawImage(chatopen ? Chatico2 : Chatico, 80, 20)
-
-                if (chatopen && !EscapeMenuOpen) {
-                    //chat background
-                    //drawRoundedRectangle(10, 70, 480, 360, 25, "#0009")
-
-                    //chat input
-                    //drawRoundedRectangle(10, 20 + 360, 480, 50, 25, "#2229")
-                    chatContainer.style.display = "block"
-
-                    //chat send
-                    //circularMouseHitbox(-15 + 480, 45 + 360, 25, "SendChat")
-                    //console.log(inputbar.value)
-                    //drawRoundedRectangle(-40 + 480, 20 + 360, 50, 50, 25, (MouseHover == "SendChat" && inputbar.value) ? "#09f9" : "#9999")
-                    //ctx.drawImage(Chaticosend, -30 + 480, 30 + 360)
-                } else {
-                    chatContainer.style.display = "none"
-                }
+                drawSpriteSheet(topspritesheet, 80, 20, 30, chatopen ? 30 : 0, 30, 30)
 
                 //draw the escape menu
                 if (escapemenuY < 1080) {
@@ -1625,11 +1618,10 @@
             }
 
             if (window.cldelta.isOnline && (currentTime - lastNetworkTick >= NETWORK_TICK_RATE)) {
-                //console.log(currentTime)
                 // 1. Fetch the raw animation frame object matrix
                 let rawAnimFrame = typeof getAnimationFrame === 'function' ? getAnimationFrame() : null;
 
-                // 2. Double-check guard: If it's missing or an unready string, pass a default idle structure
+                // 2. Double-check guard: If it's missing or an unready string, pass a default idle animation
                 let safeFramePacket = rawAnimFrame;
                 if (!safeFramePacket || typeof safeFramePacket !== 'object') {
                     safeFramePacket = animationFrames.Idle[0]
@@ -1638,14 +1630,14 @@
                 // 3. Broadcast all required values directly over CloudLink P2P channels
                 window.cldelta.broadcast({
                     type: "LIVEDATA",
-                    x: PlrX,
-                    y: PlrY,
-                    g: Currentgame,
-                    sx: Scrollx,
-                    s: Size,
-                    m: facingleft,
-                    n: config.Name,
-                    state: safeFramePacket // Drops your nested skeletal table cleanly into the payload
+                    x: PlrX,                // Player X cordinate
+                    y: PlrY,                // Player Y cordinate
+                    g: Currentgame,         // Current playing game
+                    sx: Scrollx,            // Camera scroll
+                    s: Size,                // Scale of the avatar
+                    m: facingleft,          // Avatar should be mirrored on render
+                    n: config.Name,         // Preffered name
+                    state: safeFramePacket  // Animation data
                 });
 
 
