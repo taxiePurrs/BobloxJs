@@ -774,17 +774,17 @@
         let chatContainer = document.getElementById("chatCountainer")
 
         let config = { //this is the default config
-            HeadCol: "#fe0",    // Head Color, im unsure if it supports full lenght hexadecimal color
-            LArmCol: "#fe0",    // Left Arm Color
-            RArmCol: "#fe0",    // Right Arm Color
-            TorsoCol: "#46f",   // Torso Color
-            LLegCol: "#3c0",    // Left Leg Color
-            RLegCol: "#3c0",    // Right Leg Color
-            Face: "Happy",      // Prefered face
-            ShowFPS: true,      // Show the fps, i should probably merge this into the debug option
-            Debug: true,        // Unused lol
-            Name: "Guest",      // Preffered name
-            BackgroundBlur: true,     // Toggle background blur
+            HeadCol: "#fe0",        // Head Color, im unsure if it supports full lenght hexadecimal color
+            LArmCol: "#fe0",        // Left Arm Color
+            RArmCol: "#fe0",        // Right Arm Color
+            TorsoCol: "#46f",       // Torso Color
+            LLegCol: "#3c0",        // Left Leg Color
+            RLegCol: "#3c0",        // Right Leg Color
+            Face: "Happy",          // Prefered face
+            ShowFPS: true,          // Show the fps, i should probably merge this into the debug option
+            Debug: true,            // Unused lol
+            Name: "Guest",          // Preffered name
+            BackgroundBlur: true,   // Toggle background blur
         };
 
         for (const key in config) {
@@ -1213,7 +1213,8 @@
             );
         }
 
-
+        let skybox1 = new Image()
+        loadImage(skybox1, "skybox1.png")
 
         let gamedata = {
             "1": {
@@ -1222,6 +1223,7 @@
                 startposx: 90,
                 startposy: 940,
                 Size: 2.5,
+                Skybox: skybox1,
             }
         }
 
@@ -1267,6 +1269,12 @@
                     config.BackgroundBlur = !config.BackgroundBlur
                     saveConfigValue("BackgroundBlur", config.BackgroundBlur)
                     someconfigsupdate()
+                } else if (MouseHover == "ToggleDebug") {
+                    config.Debug = !config.Debug
+                    saveConfigValue("Debug", config.Debug)
+                } else if (MouseHover == "ToggleFPS") {
+                    config.ShowFPS = !config.ShowFPS
+                    saveConfigValue("ShowFPS", config.ShowFPS)
                 }
             }
         })
@@ -1476,10 +1484,6 @@
 
         let chatopen = false
 
-        //some HomeMenu Textures and assets
-        let tycoonico = new Image()
-        loadImage(tycoonico, "TycoonIcon.png")
-
         //save configs
         window.addEventListener("beforeunload", (event) => {
             saveConfigValue("Name", JSON.stringify(config.Name))
@@ -1542,6 +1546,7 @@
                     Scrollx = 0
                     Size = GameDataLoaded.Size
                 }
+                ctx.drawImage(GameDataLoaded.Skybox, 0, 0)
                 let movex = clamp(leftrightbias, -1, 1) * dt * speed * Size
                 if (PlrY >= GameDataLoaded.floor) {
                     if (movex == 0) {
@@ -1637,12 +1642,28 @@
 
                 if (menu == 0) {
                     //draw games on home menu
-                    ctx.drawImage(tycoonico, 235, 120, 240, 240)
+                    drawSpriteSheet(UISheet, 235, 120, 0, 90, 240, 240)
+                    //ctx.drawImage(tycoonico, 235, 120, 240, 240)
                     mouseHitbox(235, 120, 240, 240, "Tycoonicon")
                 } else if (menu == 1) {
+                    // toggle background blur
                     drawSpriteSheet(UISheet, 235, 120, 380, config.BackgroundBlur ? 30 : 0, 60, 30)
                     mouseHitbox(235, 120, 60, 30, "ToggleBlur")
                     drawText("Enable Ui blur", 295, 135, 30, "Arial", "#fff")
+
+                    // toggle debug settings
+                    drawSpriteSheet(UISheet, 235, 160, 380, config.Debug ? 30 : 0, 60, 30)
+                    mouseHitbox(235, 160, 60, 30, "ToggleDebug")
+                    drawText("Debug options", 295, 175, 30, "Arial", "#fff")
+
+                    if (config.Debug) {
+                        drawSpriteSheet(UISheet, 265, 200, 380, config.ShowFPS ? 30 : 0, 60, 30)
+                        mouseHitbox(265, 200, 60, 30, "ToggleFPS")
+                        drawText("Show FPS", 325, 215, 30, "Arial", "#fff")
+                    }
+                    
+                    const offset = config.debug ? 40 : 0
+
                 }
 
                 if (chatmenudisplay !== "none") { // check and update if its not set to none
@@ -1688,7 +1709,7 @@
             //draw the cursor
             canvas.style.cursor = !(MouseHover == null || MouseHover == "EscapeBackground") ? "var(--cursor2)" : "var(--cursor1)"
 
-            if (config.ShowFPS) {
+            if (config.ShowFPS && config.Debug) {
                 drawText(
                     Math.round(1 / dt) + " FPS",
                     0,
