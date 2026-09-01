@@ -22,9 +22,8 @@ Finish the tycoon game
     Multiple floor capability
 
 Escape menu
-    Leave button
     Resume button
     Player List
 
-Optimize Optimize Optimize (i need to learn how to optimize)
+<b>Optimize Optimize Optimize (i need to learn how to optimize)</b>
 </pre>
