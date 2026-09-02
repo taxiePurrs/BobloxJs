@@ -11,50 +11,63 @@ mkdir -p dist
 
 echo "Building single-file game..."
 
-# 1. Start building the image object variable block
-IMAGE_BLOCK="<script>const IMAGES = {};"
+# 1. Initialize a Bash associative array to track images dynamically
+declare -A IMAGE_MAP
 
-# 2. Loop through PNG files inside BobloxJsEdition/Textures and append them to the string
+# 2. Loop through standard PNG files and save them to the map
 for img in "$IMAGE_DIR"/*.png; do
   if [ -f "$img" ]; then
     filename=$(basename "$img")
     
     # Convert image file to a single-line base64 string
     base64_str=$(base64 -w 0 "$img")
-
-    #echo "$base64_str"
     
-    # Append the image key/value pair to our script block string
-    IMAGE_BLOCK="$IMAGE_BLOCK IMAGES[\"$filename\"] = \"data:image/png;base64,$base64_str\";"
-  fi  
-done
-
-for img in "$IMAGE_DIR"/*.psd; do
-  if [ -f "$img" ]; then
-    filename="$(basename "$img" .psd).png"
-    echo "$filename"
-    
-    base64_str=$(convert "$img" png32:- | base64 -w 0)
-
-    #echo "$base64_str"
-
-    IMAGE_BLOCK="$IMAGE_BLOCK IMAGES[\"$filename\"] = \"data:image/png;base64,$base64_str\";"
+    # Store in map: Key = filename, Value = base64 data URI string
+    IMAGE_MAP["$filename"]="data:image/png;base64,$base64_str"
   fi
 done
 
-# Close the image script block tag
-IMAGE_BLOCK="$IMAGE_BLOCK</script>"
+# 3. Loop through PSD files, converting them via ImageMagick
+for img in "$IMAGE_DIR"/*.psd; do
+  if [ -f "$img" ]; then
+    # Change extension to .png to match how the browser will reference it
+    filename="$(basename "$img" .psd).png"
+    
+    # Convert PSD stream directly to base64 line using png32 to avoid webp format headers
+    base64_str=$(magick "$img" png32:- | base64 -w 0)
 
-# 3. Inject the image data right after the opening <head> tag of your Index.html template
-# This ensures IMAGES is defined before any of your body or script tags execute.
-export IMAGE_BLOCK
+    # Store in map (Overwrites the old .png value if the names match!)
+    IMAGE_MAP["$filename"]="data:image/png;base64,$base64_str"
+  fi
+done
+
+# 4. FIXED: Stream the image block directly to a temporary file on disk
+# This completely bypasses the Linux command line size limit (ARG_MAX)
+TEMP_SCRIPT_BLOCK="dist/images_block.tmp"
+echo "<script>const IMAGES = {};" > "$TEMP_SCRIPT_BLOCK"
+
+for filename in "${!IMAGE_MAP[@]}"; do
+  data_uri="${IMAGE_MAP[$filename]}"
+  echo "IMAGES[\"$filename\"] = \"$data_uri\";" >> "$TEMP_SCRIPT_BLOCK"
+done
+
+echo "</script>" >> "$TEMP_SCRIPT_BLOCK"
+
+# 5. FIXED INJECTION: Awk reads the temporary file directly from disk
+# We pass the PATH to the file, not the massive content string itself
 awk '
   {
     print
     if ($0 ~ /<head>/) {
-      print env["IMAGE_BLOCK"]
+      while ((getline line < temp_file) > 0) {
+        print line
+      }
+      close(temp_file)
     }
   }
-' env_eval="IMAGE_BLOCK" IMAGE_BLOCK="$IMAGE_BLOCK" "$HTML_TEMPLATE" > "$OUTPUT_FILE"
+' temp_file="$TEMP_SCRIPT_BLOCK" "$HTML_TEMPLATE" > "$OUTPUT_FILE"
+
+# Clean up the temporary file
+rm -f "$TEMP_SCRIPT_BLOCK"
 
 echo "Successfully compiled game into $OUTPUT_FILE"
