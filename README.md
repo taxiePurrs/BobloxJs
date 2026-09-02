@@ -17,12 +17,10 @@ Config saving and editor
             Clothing picker interface
 
 Finish the tycoon game
-    Icon
     Sprites
     Multiple floor capability
 
 Escape menu
-    Resume button
     Player List
 
 <b>Optimize Optimize Optimize (i need to learn how to optimize)</b>

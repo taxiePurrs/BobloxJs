@@ -47,19 +47,7 @@
         }
 
         #leave {
-            position: inherit;
-            width: 42.1875%;
-            height: 11.904761904%;
-            border-radius: 9999px;
-            bottom: 5.952380952%;
             left: 3.90625%;
-            background-color: #9999;
-            color: white;
-            container-type: size;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: var(--cursor1);
         }
 
         #leave span {
@@ -67,9 +55,32 @@
             font-family: Arial;
         }
 
-        #leave:hover {
+        #resume {
+            right: 3.90625%;
+        }
+
+        #resume span {
+            font-size: 50cqh;
+            font-family: Arial;
+        }
+        .escapebtn:hover {
             background-color: #09f9;
             cursor: var(--cursor2);
+        }
+
+        .escapebtn {
+            position: inherit;
+            width: 42.1875%;
+            height: 11.904761904%;
+            border-radius: 9999px;
+            bottom: 5.952380952%;
+            background-color: #9999;
+            color: white;
+            container-type: size;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: var(--cursor1);
         }
 
         #chatsendcontainer {
@@ -170,8 +181,11 @@
         <canvas class="canvas" id="canvas" width="1920" height="1080" tabindex="0">
         </canvas>
         <div id="escapemenu" tabindex="-1" onmousedown="event.preventDefault();">
-            <div id="leave" tabindex="-1" onmousedown="event.preventDefault();">
+            <div class="escapebtn" id="leave" tabindex="-1" onmousedown="event.preventDefault();">
                 <span>Leave</span>
+            </div>
+            <div class="escapebtn" id="resume" tabindex="-1" onmousedown="event.preventDefault();">
+                <span>Resume</span>
             </div>
         </div>
         <div id="chatCountainer">
@@ -1307,6 +1321,10 @@
 
         document.getElementById("leave").addEventListener("click", (e) => {
             Currentgame = 0
+        })
+
+        document.getElementById("resume").addEventListener("click", (e) => {
+            EscapeMenuOpen = false
         })
 
 
