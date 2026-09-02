@@ -63,6 +63,7 @@
             font-size: 50cqh;
             font-family: Arial;
         }
+
         .escapebtn:hover {
             background-color: #09f9;
             cursor: var(--cursor2);
@@ -666,15 +667,16 @@
                 }
 
                 // Store all critical variables directly into a table
-                remotePlayers[remoteSender].x = packet.x;                 // Character X Coordinate
-                remotePlayers[remoteSender].y = packet.y;                 // Character Y Coordinate
-                remotePlayers[remoteSender].sx = packet.sx;               // Their X scroll
-                remotePlayers[remoteSender].state = packet.state;         // Their current animation data (sending it fully allow custom modded animations that work with base clients)
-                remotePlayers[remoteSender].g = packet.g;                 // The game they're currently in
-                remotePlayers[remoteSender].s = packet.s;                 // Avatar scale in decimal
-                remotePlayers[remoteSender].m = packet.m;                 // Should we mirror the player model when rendering 
-                remotePlayers[remoteSender].n = packet.n;                 // Preffered name for stuff like the chat
-                remotePlayers[remoteSender].lastUpdate = Date.now();      // Heartbeat time for auto unloading
+                remotePlayers[remoteSender].x = packet.x;                   // Character X Coordinate
+                remotePlayers[remoteSender].y = packet.y;                   // Character Y Coordinate
+                remotePlayers[remoteSender].sx = packet.sx;                 // Their X scroll
+                remotePlayers[remoteSender].state = packet.state;           // Their current animation data (sending it fully allow custom modded animations that work with base clients)
+                remotePlayers[remoteSender].g = packet.g;                   // The game they're currently in
+                remotePlayers[remoteSender].s = packet.s;                   // Avatar scale in decimal
+                remotePlayers[remoteSender].m = packet.m;                   // Should we mirror the player model when rendering 
+                remotePlayers[remoteSender].n = packet.n;                   // Preffered name for stuff like the chat
+                remotePlayers[remoteSender].ping = Date.now() - packet.time // ping
+                remotePlayers[remoteSender].lastUpdate = Date.now();        // Heartbeat time for auto unloading
 
             } else if (packet.type === "CHAT" && package.g == Currentgame) { //check if its a chat packet
                 DrawMessage(String(JSON.parse(packet.n)) + ": " + String(packet.text)) //print the chat message if its a chat packet
@@ -1257,15 +1259,28 @@
 
         let gamedata = {
             "1": {
-                floor: 940,
                 width: 1920,
                 startposx: 90,
                 startposy: 940,
                 Size: 2.5,
                 Skybox: skybox1,
                 foreground: foreground1,
+                floors: [
+                    {
+                        xstart: 0,
+                        xend: 1920,
+                        y: 940
+                    },
+                    {
+                        xstart: 600,
+                        xend: 1920,
+                        y: 918
+                    }
+                ]
             }
         }
+
+        let currentfloor = 0
 
         let EscapeMenuOpen = false
         const inputbar = document.getElementById("chatinput")
@@ -1544,10 +1559,15 @@
         let escapemenudisplay = "block"
         let escapemenu = document.getElementById("escapemenu")
 
+        function inRange(number, min, max) {
+            return (number === clamp(number, min, max))
+        }
+
         function gameLoop(currentTime) {
             let dt = (currentTime - lastTime) / 1000;
             if (Number.isNaN(dt) || dt > 0.1) dt = 0;
             lastTime = currentTime;
+
             //set reset hovering id
             MouseHover = null
             let leftrightbias = 0
@@ -1582,6 +1602,7 @@
                 if (leftrightbias > 0) { facingleft = false }
                 if (leftrightbias < 0) { facingleft = true }
                 if (Currentgame != prevgame) {
+                    currentfloor = 0
                     chatBackground.innerHTML = ""
                     GameDataLoaded = gamedata[String(Currentgame)]
                     PlrX = GameDataLoaded.startposx
@@ -1592,7 +1613,20 @@
                 }
                 ctx.drawImage(GameDataLoaded.Skybox, 0, 0)
                 let movex = clamp(leftrightbias, -1, 1) * dt * speed * Size
-                if (PlrY >= GameDataLoaded.floor) {
+
+                // get the current floor
+                for (let i in GameDataLoaded.floors) {
+                    if (i !== currentfloor) {
+                        const data = GameDataLoaded.floors[i]
+                        const data2 = GameDataLoaded.floors[currentfloor]
+
+                        if (((data.y < data2.y) || (inRange(PlrX, data.xstart, data.xend) && !inRange(PlrX, data2.xstart, data2.xend))) && PlrY - 20 < data.y) {
+                            currentfloor = i
+                        }
+                    }
+                }
+
+                if (PlrY >= GameDataLoaded.floors[currentfloor].y) {
                     if (movex == 0) {
                         characterState = "Idle"
                         animframe = 0
@@ -1616,21 +1650,21 @@
                 }
                 if (PlrX < 10 * Size) {
                     PlrX = 10 * Size
-                    if (PlrY >= GameDataLoaded.floor || characterState == "Walking") {
+                    if (PlrY >= GameDataLoaded.floors[currentfloor].y || characterState == "Walking") {
                         characterState = "Idle",
                             animframe = 0
                     }
                 }
                 if (PlrX > 1920 - 10 * Size) {
                     PlrX = 1920 - 10 * Size
-                    if (PlrY >= GameDataLoaded.floor || characterState == "Walking") {
+                    if (PlrY >= GameDataLoaded.floors[currentfloor].y || characterState == "Walking") {
                         characterState = "Idle",
                             animframe = 0
                     }
                 }
-                if (PlrY >= GameDataLoaded.floor) {
+                if (PlrY >= GameDataLoaded.floors[currentfloor].y) {
                     yvel = 0
-                    PlrY = GameDataLoaded.floor
+                    PlrY = GameDataLoaded.floors[currentfloor].y
                     if (canvasfocus && (keysdown.has("w") || keysdown.has("ArrowUp"))) {
                         yvel = -Size * (jumppower / 2)
                         animationClock = 0.1
@@ -1789,14 +1823,12 @@
                     s: Size,                // Scale of the avatar
                     m: facingleft,          // Avatar should be mirrored on render
                     n: config.Name,         // Preffered name
+                    time: Date.now(),       // current time, used for ping calculation
                     state: safeFramePacket  // Animation data
                 });
 
-
-
                 lastNetworkTick = currentTime;
             }
-
 
             lasttime = currentTime
             requestAnimationFrame(gameLoop); //request next frame
