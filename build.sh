@@ -34,7 +34,7 @@ for img in "$IMAGE_DIR"/*.psd; do
     filename="$(basename "$img" .psd).png"
     
     # Compress as highly optimized lossy WebP at 85% quality
-    base64_str=$(convert "$img" -strip -quality 85 webp:- | base64 -w 0)
+    base64_str=$(convert "$img" -flatten -strip -quality 85 webp:- | base64 -w 0)
 
     # Note the updated data type header block definition: image/webp
     IMAGE_MAP["$filename"]="data:image/webp;base64,$base64_str"
