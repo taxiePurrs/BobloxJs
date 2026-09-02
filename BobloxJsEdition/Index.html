@@ -1238,6 +1238,9 @@
         let skybox1 = new Image()
         loadImage(skybox1, "skybox1.png")
 
+        let foreground1 = new Image()
+        loadImage(foreground1, "TycoonForeground.png")
+
         let gamedata = {
             "1": {
                 floor: 940,
@@ -1246,6 +1249,7 @@
                 startposy: 940,
                 Size: 2.5,
                 Skybox: skybox1,
+                foreground: foreground1,
             }
         }
 
@@ -1696,6 +1700,10 @@
                     escapemenu.style.display = escapemenudisplay = "none"
                 }
             } else {
+
+                if (GameDataLoaded) {
+                    ctx.drawImage(GameDataLoaded.foreground, 0, 0)
+                }
 
                 if ((chatopen && !EscapeMenuOpen ? "block" : "none" /* gets the target display type */) !== chatmenudisplay) {
                     chatContainer.style.display = chatmenudisplay = chatmenudisplay === "none" ? "block" : "none"; // update if outdated
