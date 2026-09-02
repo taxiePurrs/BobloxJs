@@ -34,7 +34,7 @@ for img in "$IMAGE_DIR"/*.psd; do
     filename="$(basename "$img" .psd).png"
     
     # Convert PSD stream directly to base64 line using png32 to avoid webp format headers
-    base64_str=$(magick "$img" png32:- | base64 -w 0)
+    base64_str=$(convert "$img" png32:- | base64 -w 0)
 
     # Store in map (Overwrites the old .png value if the names match!)
     IMAGE_MAP["$filename"]="data:image/png;base64,$base64_str"
