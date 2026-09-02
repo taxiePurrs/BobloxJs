@@ -950,7 +950,11 @@
         }
 
         function drawSpriteSheet(img, cx, cy, sx, sy, w, h) {
-            ctx.drawImage(img, sx, sy, w, h, cx, cy, w, h);
+            try {
+                ctx.drawImage(img, sx, sy, w, h, cx, cy, w, h);
+            } catch (error) {
+                return
+            }
         }
 
         function drawComplexImage(image, X, Y, Scale, Degrees, MirrorX) {
