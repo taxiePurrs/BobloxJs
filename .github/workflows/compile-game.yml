@@ -23,6 +23,11 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    - name: Setup ImageMagick CLI
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y imagemagick
+
     - name: Compile HTML and PNGs
       run: |
         chmod +x build.sh
