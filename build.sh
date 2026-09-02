@@ -22,7 +22,7 @@ for img in "$IMAGE_DIR"/*.png; do
     # Convert image file to a single-line base64 string
     base64_str=$(base64 -w 0 "$img")
 
-    echo "$base64_str"
+    #echo "$base64_str"
     
     # Append the image key/value pair to our script block string
     IMAGE_BLOCK="$IMAGE_BLOCK IMAGES[\"$filename\"] = \"data:image/png;base64,$base64_str\";"
@@ -32,10 +32,11 @@ done
 for img in "$IMAGE_DIR"/*.psd; do
   if [ -f "$img" ]; then
     filename="$(basename "$img" .psd).png"
+    echo "$filename"
     
-    base64_str=$(magick "$img" png32:- | base64 -w 0)
+    base64_str=$(convert "$img" png32:- | base64 -w 0)
 
-    echo "$base64_str"
+    #echo "$base64_str"
 
     IMAGE_BLOCK="$IMAGE_BLOCK IMAGES[\"$filename\"] = \"data:image/png;base64,$base64_str\";"
   fi
