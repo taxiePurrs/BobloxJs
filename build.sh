@@ -33,7 +33,7 @@ for img in "$IMAGE_DIR"/*.psd; do
   if [ -f "$img" ]; then
     filename="$(basename "$img" .psd).png"
     
-    base64_str=$(convert "$img" $filename | base64 -w 0)
+    base64_str=$(magick "$img" png32:- | base64 -w 0)
 
     echo "$base64_str"
 
