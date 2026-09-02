@@ -33,11 +33,11 @@ for img in "$IMAGE_DIR"/*.psd; do
     # Change extension to .png to match how the browser will reference it
     filename="$(basename "$img" .psd).png"
     
-    # Convert PSD stream directly to base64 line using png32 to avoid webp format headers
-    base64_str=$(convert "$img" png32:- | base64 -w 0)
+    # Compress as highly optimized lossy WebP at 85% quality
+    base64_str=$(magick "$img" -strip -quality 85 webp:- | base64 -w 0)
 
-    # Store in map (Overwrites the old .png value if the names match!)
-    IMAGE_MAP["$filename"]="data:image/png;base64,$base64_str"
+    # Note the updated data type header block definition: image/webp
+    IMAGE_MAP["$filename"]="data:image/webp;base64,$base64_str"
   fi
 done
 
