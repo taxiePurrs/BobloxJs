@@ -24,6 +24,16 @@ for img in "$IMAGE_DIR"/*.png; do
     
     # Append the image key/value pair to our script block string
     IMAGE_BLOCK="$IMAGE_BLOCK IMAGES[\"$filename\"] = \"data:image/png;base64,$base64_str\";"
+  fi  
+done
+
+for img in "$IMAGE_DIR"/*.psd; do
+  if [ -f "$img" ]; then
+    filename="$(basename "$img" .psd).png"
+    
+    base64_str=$(magick "$img" png:- | base64 -w 0)
+
+    IMAGE_BLOCK="$IMAGE_BLOCK IMAGES[\"$filename\"] = \"data:image/png;base64,$base64_str\";"
   fi
 done
 
@@ -32,6 +42,14 @@ IMAGE_BLOCK="$IMAGE_BLOCK</script>"
 
 # 3. Inject the image data right after the opening <head> tag of your Index.html template
 # This ensures IMAGES is defined before any of your body or script tags execute.
-sed "s|<head>|<head>\n$IMAGE_BLOCK|g" "$HTML_TEMPLATE" > "$OUTPUT_FILE"
+export IMAGE_BLOCK
+awk '
+  {
+    print
+    if ($0 ~ /<head>/) {
+      print env["IMAGE_BLOCK"]
+    }
+  }
+' env_eval="IMAGE_BLOCK" IMAGE_BLOCK="$IMAGE_BLOCK" "$HTML_TEMPLATE" > "$OUTPUT_FILE"
 
 echo "Successfully compiled game into $OUTPUT_FILE"
