@@ -1620,7 +1620,7 @@
                         const data = GameDataLoaded.floors[i]
                         const data2 = GameDataLoaded.floors[currentfloor]
 
-                        if (((data.y < data2.y) || (inRange(PlrX, data.xstart, data.xend) && !inRange(PlrX, data2.xstart, data2.xend))) && PlrY - 20 < data.y) {
+                        if (((data.y < data2.y) || !inRange(PlrX, data2.xstart, data2.xend)) && PlrY - 20 < data.y && inRange(PlrX, data.xstart, data.xend)) {
                             currentfloor = i
                         }
                     }
