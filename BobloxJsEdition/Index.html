@@ -819,6 +819,10 @@
             Debug: true,            // Unused lol
             Name: "Guest",          // Preffered name
             BackgroundBlur: true,   // Toggle background blur
+            TycoonProgress: "0",    // Tycoon progress
+            TycoonMoney: 0,         // Tycoon money
+            TycoonRebirths: 0,      // Tycoon rebirths
+            Bobux: 0,               // Bobux
         };
 
         for (const key in config) {
@@ -829,6 +833,7 @@
                     try {
                         // Tries to parse booleans ("false"), numbers ("42"), or valid JSON strings ('"Guest"')
                         config[key] = JSON.parse(rawValue);
+                        
                     } catch (error) {
                         // If parsing fails (like on raw "Guest"), treat it as a normal string
                         config[key] = rawValue;
@@ -1269,16 +1274,21 @@
                     {
                         xstart: 0,
                         xend: 1920,
-                        y: 940
+                        y: 940,
+                        enabled: true
                     },
                     {
                         xstart: 600,
                         xend: 1920,
-                        y: 918
+                        y: 918,
+                        enabled: false
                     }
                 ]
             }
         }
+
+        let TycoonSpritesheet = new Image()
+        loadImage(TycoonSpritesheet, "TycoonBuilding.png")
 
         let currentfloor = 0
 
@@ -1545,14 +1555,9 @@
 
         //save configs
         window.addEventListener("beforeunload", (event) => {
-            saveConfigValue("Name", JSON.stringify(config.Name))
+            saveConfigValue("Name", config.Name)
+            saveConfigValue("TycoonProgress", config.TycoonProgress)
         });
-
-        /*
-        ###########
-        #GAME LOOP#
-        ###########
-        */
 
         let chatmenudisplay = "none"
 
@@ -1562,6 +1567,69 @@
         function inRange(number, min, max) {
             return (number === clamp(number, min, max))
         }
+
+        function ChangeBase(val, startbase, endbase) {
+            const decimal = parseInt(val, startbase)
+            return decimal.toString(endbase)
+        }
+
+        function readBit(bin, bit) {
+            const str = String(bin)                     // stringify the binary number
+            let data = str.charAt(str.length - bit - 1) // get the rightmost number in the binary and shift to left by variable bit
+            return (data === "1")                       // is data equal to 1 
+        }
+
+        function setbit(bin, bit, val) {
+            let str = String(bin)
+            str = "0".repeat(Math.max(bit - str.length + 1, 0)) + str // 0th index, 1 length, add 5, 5th index 6 length
+            return str.split("").with(-(bit + 1), String(val)).join("");
+        }
+
+        let tycoonbuttons = [
+            {
+                text: "Foundation",
+                price: 0,
+                displayprice: "Free",
+                bit: 0,
+                x: 611,
+                y: 918
+            },
+            {
+                text: "Conveyor",
+                price: 0,
+                displayprice: "Free",
+                bit: 0,
+                x: 1665,
+                y: 896
+            },
+            {
+                text: "Collector",
+                price: 0,
+                displayprice: "Free",
+                bit: 0,
+                x: 1795,
+                y: 896
+            }
+        ]
+
+        function makeTycoonButton(id, bin) {
+            const data = tycoonbuttons[id]
+            drawRoundedRectangle(data.x, data.y, 120, 30, 5, "#e00")
+            drawText(data.text, data.x + 60, data.y - 80, 30, "Arial", "#fff", "center")
+            drawText(data.displayprice, data.x + 60, data.y - 50, 30, "Arial", "#fff", "center")
+
+            if (!readBit(bin, id) && config.TycoonMoney >= data.price && inRange(PlrX, data.x, data.x+120) && inRange(PlrY, data.y, data.y + 30)) {
+                config.TycoonMoney -= data.price
+                return setbit(bin, id, "1")
+            }
+            return setbit(bin, id, "0")
+        }
+
+        /*
+        ###########
+        #GAME LOOP#
+        ###########
+        */
 
         function gameLoop(currentTime) {
             let dt = (currentTime - lastTime) / 1000;
@@ -1616,11 +1684,11 @@
 
                 // get the current floor
                 for (let i in GameDataLoaded.floors) {
-                    if (i !== currentfloor) {
+                    if (i !== currentfloor && GameDataLoaded.floors[i].enabled) {
                         const data = GameDataLoaded.floors[i]
                         const data2 = GameDataLoaded.floors[currentfloor]
 
-                        if (((data.y < data2.y) || !inRange(PlrX, data2.xstart, data2.xend)) && PlrY - 20 < data.y && inRange(PlrX, data.xstart, data.xend)) {
+                        if (((data.y < data2.y) || !inRange(PlrX, data2.xstart, data2.xend)) && PlrY - 25 < data.y && inRange(PlrX, data.xstart, data.xend)) {
                             currentfloor = i
                         }
                     }
@@ -1672,6 +1740,9 @@
                         animframe = 0
                     }
                 } else {
+                    if (characterState !== "Airborne") {
+                        animationClock = 0
+                    }
                     characterState = "Airborne"
                     if (animationClock > 0) {
                         animframe = 0
@@ -1679,6 +1750,29 @@
                         animframe = 1
                     }
                     yvel += 1000 * Size * dt
+                }
+                if (Currentgame === 1) {
+                    let tycoondata = ChangeBase(config.TycoonProgress, 16, 2)
+                    GameDataLoaded.floors[1].enabled = readBit(tycoondata, 0)
+
+                    if (readBit(tycoondata, 0)) {
+                        if (readBit(tycoondata, 1)) {
+
+                        } else {
+                            tycoondata = makeTycoonButton(1, tycoondata)
+                        }
+                        if (!readBit(tycoondata, 2)) {
+                            tycoondata = makeTycoonButton(2, tycoondata)
+                        }
+                        if (readBit(tycoondata, 5)) {
+
+                        } else {
+                            drawSpriteSheet(TycoonSpritesheet, 600, 918, 0, 300, 1320, 22)
+                        }
+                    } else {
+                        tycoondata = makeTycoonButton(0, tycoondata)
+                    }
+                    config.TycoonProgress = ChangeBase(tycoondata, 2, 16)
                 }
 
 
