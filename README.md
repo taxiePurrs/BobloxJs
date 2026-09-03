@@ -18,7 +18,8 @@ Config saving and editor
 
 Finish the tycoon game
     Sprites
-    Multiple floor capability
+    Head collisions
+    Object tweens
 
 Escape menu
     Player List
