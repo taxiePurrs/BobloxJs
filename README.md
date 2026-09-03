@@ -17,9 +17,9 @@ Config saving and editor
             Clothing picker interface
 
 Finish the tycoon game
-    Sprites
+    Button positioning
+    Money collection
     Head collisions
-    Object tweens
 
 Escape menu
     Player List

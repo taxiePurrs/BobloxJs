@@ -821,6 +821,7 @@
             BackgroundBlur: true,   // Toggle background blur
             TycoonProgress: "0",    // Tycoon progress
             TycoonMoney: 0,         // Tycoon money
+            TycoonPending: 0,       // Pending tycoon money
             TycoonRebirths: 0,      // Tycoon rebirths
             Bobux: 0,               // Bobux
         };
@@ -1557,6 +1558,8 @@
         window.addEventListener("beforeunload", (event) => {
             saveConfigValue("Name", config.Name)
             saveConfigValue("TycoonProgress", config.TycoonProgress)
+            saveConfigValue("TycoonPending", config.TycoonPending)
+            saveConfigValue("TycoonProgress", "0")
         });
 
         let chatmenudisplay = "none"
@@ -1599,7 +1602,7 @@
                 price: 0,
                 displayprice: "Free",
                 bit: 0,
-                x: 1665,
+                x: 1327,
                 y: 896
             },
             {
@@ -1607,10 +1610,20 @@
                 price: 0,
                 displayprice: "Free",
                 bit: 0,
-                x: 1795,
+                x: 1526,
+                y: 896
+            },
+            {
+                text: "Dropper",
+                price: 0,
+                displayprice: "Free",
+                bit: 0,
+                x: 727,
                 y: 896
             }
         ]
+
+        let tycoonblocks = []
 
         function makeTycoonButton(id, bin) {
             const data = tycoonbuttons[id]
@@ -1624,6 +1637,8 @@
             }
             return setbit(bin, id, "0")
         }
+
+        let lastTycoonDrop = 0
 
         /*
         ###########
@@ -1751,23 +1766,74 @@
                     }
                     yvel += 1000 * Size * dt
                 }
+
+                /*
+                #############
+                #TYCOON CODE#
+                #############
+                */
+
                 if (Currentgame === 1) {
                     let tycoondata = ChangeBase(config.TycoonProgress, 16, 2)
                     GameDataLoaded.floors[1].enabled = readBit(tycoondata, 0)
 
                     if (readBit(tycoondata, 0)) {
                         if (readBit(tycoondata, 1)) {
+                            if (currentTime - lastTycoonDrop >= 1000 && readBit(tycoondata, 2)) {
+                                lastTycoonDrop = currentTime 
+                            }
 
+                            if (readBit(tycoondata, 3)) {
+                                drawSpriteSheet(TycoonSpritesheet, 737, 702, 0, 106, 100, 216) // dropper 1
+                                if (lastTycoonDrop == currentTime) {
+                                    tycoonblocks.push({x: 767, y: 732, value: 1})
+                                }
+                            }
+
+                            if (readBit(tycoondata, 2)) {
+                                
+                                for (let i = 0; i < tycoonblocks.length; i++) {
+                                    let data = tycoonblocks[i]
+                                    if (data.y < 782) {
+                                        data.y += dt*400
+                                        if (data.y > 782) {
+                                            data.y = 782
+                                        } 
+                                        tycoonblocks[i] = data
+                                        drawRectangle(data.x, data.y, 40, 40, "#e00")
+                                    } else {
+                                        data.x += dt*200
+                                        tycoonblocks[i] = data
+                                        if (data.x > 1482) {
+                                            config.TycoonPending += data.value
+                                            tycoonblocks.splice(i, 1)
+                                            i--
+                                        } else {
+                                            drawRectangle(data.x, data.y, 40, 40, "#e00")
+                                        }
+                                    }
+                                }
+                            }
+
+                            
+
+                            drawSpriteSheet(TycoonSpritesheet, 692, 792, 100, 196, 952, 126) // conveyor
+
+                            if (!readBit(tycoondata, 3)) {
+                                tycoondata = makeTycoonButton(3, tycoondata)
+                            }
                         } else {
                             tycoondata = makeTycoonButton(1, tycoondata)
                         }
-                        if (!readBit(tycoondata, 2)) {
+                        if (readBit(tycoondata, 2)) {
+                            drawSpriteSheet(TycoonSpritesheet, 1452, 679, 1052, 83, 268, 239) // collector
+                        } else {
                             tycoondata = makeTycoonButton(2, tycoondata)
                         }
                         if (readBit(tycoondata, 5)) {
 
                         } else {
-                            drawSpriteSheet(TycoonSpritesheet, 600, 918, 0, 300, 1320, 22)
+                            drawSpriteSheet(TycoonSpritesheet, 600, 918, 0, 0, 1320, 22) //floor
                         }
                     } else {
                         tycoondata = makeTycoonButton(0, tycoondata)
