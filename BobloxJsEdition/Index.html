@@ -1019,6 +1019,49 @@
             ctx.fillText(Text, X, Y);
         }
 
+        let cachedCollectorSize = 0
+
+        function abbreviateNumber(num) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                notation: 'compact',
+                compactDisplay: 'short',
+                maximumFractionDigits: 1
+            }).format(num);
+        }
+
+        function checkTextWidth(Text, Font, Size) {
+            ctx.font = `${Size}px ${Font}`
+            return ctx.measureText(Text).width
+        }
+
+        function calculateTextSize(Text, Width, Height, Font, CachedSize = 50) {
+            let size = CachedSize
+            if (checkTextWidth(Text, Font, size) > Width || size > Height) {
+                while (checkTextWidth(Text, Font, size) > Width || size > Height) {
+                    size -= 1
+                }
+            } else {
+                while (checkTextWidth(Text, Font, size) < Width && size <= Height) {
+                    size += 1
+                }
+                size -= 1
+            }
+
+            return size
+        }
+
+        function drawBoundedText(Text, X, Y, Width, Height, Font, Color, Alignment = "left", CachedSize = 0) {
+            const calcsize = calculateTextSize(Text, Width, Height, Font, CachedSize)
+            ctx.fillStyle = Color;
+            ctx.font = `${calcsize}px ${Font}`;
+            ctx.textAlign = Alignment;           // Options: "left", "center", "right"
+            ctx.textBaseline = "middle";         // Centers text vertically on the Y anchor
+            ctx.fillText(Text, X, Y);
+            return calcsize
+        }
+
         function DarkenHex(hex) {
             let cleanHex = hex.replace('#', '');
             let isShort = cleanHex.length === 3;
@@ -1828,6 +1871,7 @@
                         }
                         if (readBit(tycoondata, 2)) {
                             drawSpriteSheet(TycoonSpritesheet, 1452, 679, 1052, 83, 268, 239) // collector
+                            cachedCollectorSize = drawBoundedText(abbreviateNumber(config.TycoonPending), 1088, 89, 196, 68, "Arial", "#ff0", "center", cachedCollectorSize) // text
                         } else {
                             tycoondata = makeTycoonButton(2, tycoondata)
                         }
