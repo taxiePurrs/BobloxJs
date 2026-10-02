@@ -979,6 +979,35 @@
             }
         }
 
+        function drawPolygon(FillColor, StrokeColor, StrokeWidth, ...points) { // x and y are individual points, only loop through half!!!
+            if (points.length % 2 === 0) {
+                if (points.length >= 6) {
+                    ctx.beginPath();
+                    for (let i = 0; i < points.length; i += 2) {
+                        if (i === 0) {
+                            ctx.moveTo(points[i], points[i+1]);
+                        } else {
+                            ctx.lineTo(points[i], points[i+1]);
+                        }
+                    }
+                    ctx.closePath();
+                    if (FillColor !== null) {
+                        ctx.fillStyle = FillColor;
+                        ctx.fill();
+                    }
+                    if (StrokeWidth !== 0) {
+                        ctx.lineWidth = StrokeWidth;
+                        ctx.strokeStyle = StrokeColor;
+                        ctx.stroke();
+                    }
+                } else {
+                    warn("Less than 6 points proivded!!!")
+                }
+            } else {
+                warn("Odd number of polygon points arguments!!!")
+            }
+        }
+
         function drawComplexImage(image, X, Y, Scale, Degrees, MirrorX) {
             if (image.naturalWidth === 0) return;
 
@@ -1021,14 +1050,14 @@
 
         let cachedCollectorSize = 0
 
-        function abbreviateNumber(num) {
+        function abbreviateToMoney(num) {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: 'USD',
                 notation: 'compact',
                 compactDisplay: 'short',
                 maximumFractionDigits: 1
-            }).format(num);
+            }).format(Math.floor(num));
         }
 
         function checkTextWidth(Text, Font, Size) {
@@ -1052,7 +1081,7 @@
             return size
         }
 
-        function drawBoundedText(Text, X, Y, Width, Height, Font, Color, Alignment = "left", CachedSize = 0) {
+        function drawBoundedText(Text, X, Y, Width, Height, Font, Color, Alignment = "center", CachedSize = 40) {
             const calcsize = calculateTextSize(Text, Width, Height, Font, CachedSize)
             ctx.fillStyle = Color;
             ctx.font = `${calcsize}px ${Font}`;
@@ -1314,19 +1343,119 @@
                 Size: 2.5,
                 Skybox: skybox1,
                 foreground: foreground1,
+                gravity: 1930.44,
                 floors: [
                     {
                         xstart: 0,
                         xend: 1920,
                         y: 940,
-                        enabled: true
+                        enabled: true,
+                        passable: false,
+                        Ladder: false
                     },
                     {
                         xstart: 600,
                         xend: 1920,
                         y: 918,
+                        enabled: false,
+                        passable: false,
+                        Ladder: false
+                    },
+                    {
+                        xstart: 600,
+                        xend: 1746,
+                        y: 596,
+                        enabled: false,
+                        passable: false,
+                        Ladder: false
+                    },
+                    {
+                        xstart: 1896,
+                        xend: 1920,
+                        y: 596,
+                        enabled: false,
+                        passable: false,
+                        Ladder: false
+                    },
+                    {
+                        xstart: 1746,
+                        xend: 1896,
+                        y: 885,
+                        enabled: false,
+                        passable: true,
+                        Ladder: true
+                    },
+                    {
+                        xstart: 1746,
+                        xend: 1896,
+                        y: 839,
+                        enabled: false,
+                        passable: true,
+                        Ladder: true
+                    },
+                    {
+                        xstart: 1746,
+                        xend: 1896,
+                        y: 793,
+                        enabled: false,
+                        passable: true,
+                        Ladder: true
+                    },
+                    {
+                        xstart: 1746,
+                        xend: 1896,
+                        y: 747,
+                        enabled: false,
+                        passable: true,
+                        Ladder: true
+                    },
+                    {
+                        xstart: 1746,
+                        xend: 1896,
+                        y: 701,
+                        enabled: false,
+                        passable: true,
+                        Ladder: true
+                    },
+                    {
+                        xstart: 1746,
+                        xend: 1896,
+                        y: 655,
+                        enabled: false,
+                        passable: true,
+                        Ladder: true
+                    },
+                    {
+                        xstart: 1746,
+                        xend: 1896,
+                        y: 609,
+                        enabled: false,
+                        passable: true,
+                        Ladder: true
+                    }
+                ],
+                ceilings: [
+                    {
+                        xstart: 600,
+                        xend: 1746,
+                        y: 607,
+                        enabled: false
+                    },
+                    {
+                        xstart: 1896,
+                        xend: 1920,
+                        y: 607,
                         enabled: false
                     }
+                ],
+                walls: [
+                    {
+                        x: 1908,
+                        ystart: 596,
+                        yend: 918,
+                        width: 12,
+                        enabled: false
+                    },
                 ]
             }
         }
@@ -1431,6 +1560,7 @@
 
         let currentparty = 0
         let prevgame = 0
+        let prevY = 0
         let animationClock = 0
         let facingleft = false
         let lastTime = 0
@@ -1439,7 +1569,7 @@
         let GameDataLoaded = null
         let speed = 150
         let Size = 2.5
-        let jumppower = 1000
+        let jumppower = 100
         let menu = 0
 
         let lastNetworkTick = 0;
@@ -1603,7 +1733,7 @@
             saveConfigValue("TycoonProgress", config.TycoonProgress)
             saveConfigValue("TycoonPending", config.TycoonPending)
             saveConfigValue("TycoonMoney", config.TycoonMoney)
-            saveConfigValue("TycoonProgress", "0")
+            //saveConfigValue("TycoonProgress", "0")
         });
 
         let chatmenudisplay = "none"
@@ -1631,6 +1761,8 @@
             str = "0".repeat(Math.max(bit - str.length + 1, 0)) + str // 0th index, 1 length, add 5, 5th index 6 length
             return str.split("").with(-(bit + 1), String(val)).join("");
         }
+
+        const tycoonoffset = 644
 
         let tycoonbuttons = [
             {
@@ -1663,6 +1795,38 @@
                 displayprice: "Free",
                 bit: 0,
                 x: 727,
+                y: 896
+            },
+            {
+                text: "Dropper",
+                price: 25,
+                displayprice: "$25",
+                bit: 0,
+                x: 917,
+                y: 896
+            },
+            {
+                text: "Dropper",
+                price: 100,
+                displayprice: "$100",
+                bit: 0,
+                x: 1107,
+                y: 896
+            },
+            {
+                text: "Upgrader",
+                price: 250,
+                displayprice: "$250",
+                bit: 0,
+                x: 1297,
+                y: 896
+            },
+            {
+                text: "Floor 2",
+                price: 500,
+                displayprice: "$500",
+                bit: 0,
+                x: 1761,
                 y: 896
             }
         ]
@@ -1717,7 +1881,6 @@
                 characterState = "Idle"
                 animframe = 0
             } else {
-                PlrY += yvel * dt
                 let canvasfocus = isFocused(canvas)
                 if (canvasfocus) {
                     if (keysdown.has("ArrowLeft")) { leftrightbias -= 1 }
@@ -1738,8 +1901,32 @@
                     Scrollx = 0
                     Size = GameDataLoaded.Size
                 }
+
+                prevY = PlrY
+                PlrY += yvel * dt
+                for (let i in GameDataLoaded.ceilings) {
+                    const data = GameDataLoaded.ceilings[i]
+                    if (data.enabled && inRange(PlrX, data.xstart - 10*Size, data.xend + 10*Size) && PlrY-100*Size < data.y && prevY-100*Size > data.y) {
+                        yvel *= -0.5
+                        PlrY = data.y+100*Size
+                    }
+                }
+
                 ctx.drawImage(GameDataLoaded.Skybox, 0, 0)
+                const prevX = PlrX+Scrollx
                 let movex = clamp(leftrightbias, -1, 1) * dt * speed * Size
+                const newx = PlrX+movex+Scrollx
+
+                for (let i in GameDataLoaded.walls) {
+                    const data = GameDataLoaded.walls[i]
+                    if (data.enabled && inRange(PlrY, data.ystart - 90*Size, data.yend + 55*Size)) {
+                        if (newx+10*Size > data.x - data.width && prevX+10*Size < data.x - data.width) {
+                            movex = newx - data.x-data.width
+                        } else if (newx*Size < data.x + data.width && prevX*Size > data.x + data.width) {
+                            movex = newx - data.x+data.width+10*Size
+                        }
+                    }
+                }
 
                 // get the current floor
                 for (let i in GameDataLoaded.floors) {
@@ -1747,8 +1934,12 @@
                         const data = GameDataLoaded.floors[i]
                         const data2 = GameDataLoaded.floors[currentfloor]
 
-                        if (((data.y < data2.y) || !inRange(PlrX, data2.xstart, data2.xend)) && PlrY - 25 < data.y && inRange(PlrX, data.xstart, data.xend)) {
+                        if ((!(data.passable && (keysdown.has("s") || keysdown.has("ArrowDown")))) && ((data.y < data2.y) || !inRange(PlrX, data2.xstart, data2.xend)) && PlrY - 10*Size < data.y && inRange(PlrX, data.xstart, data.xend)) {
                             currentfloor = i
+                        }
+                    } else {
+                        if (GameDataLoaded.floors[currentfloor].passable && (keysdown.has("s") || keysdown.has("ArrowDown"))) {
+                            currentfloor = 0
                         }
                     }
                 }
@@ -1789,11 +1980,11 @@
                             animframe = 0
                     }
                 }
-                if (PlrY >= GameDataLoaded.floors[currentfloor].y) {
+                if (PlrY >= GameDataLoaded.floors[currentfloor].y && ((!GameDataLoaded.floors[currentfloor].Ladder) || (GameDataLoaded.floors[currentfloor].Ladder && yvel >= 0))) {
                     yvel = 0
                     PlrY = GameDataLoaded.floors[currentfloor].y
                     if (canvasfocus && (keysdown.has("w") || keysdown.has("ArrowUp"))) {
-                        yvel = -Size * (jumppower / 2)
+                        yvel = -Size * Math.sqrt(2 * GameDataLoaded.gravity * jumppower)
                         animationClock = 0.1
                         characterState = "Airborne"
                         animframe = 0
@@ -1808,7 +1999,7 @@
                     } else {
                         animframe = 1
                     }
-                    yvel += 1000 * Size * dt
+                    yvel += GameDataLoaded.gravity * Size * dt
                 }
 
                 /*
@@ -1821,16 +2012,42 @@
                     let tycoondata = ChangeBase(config.TycoonProgress, 16, 2)
                     GameDataLoaded.floors[1].enabled = readBit(tycoondata, 0)
 
+                    const seventhbit = readBit(tycoondata, 7)
+                    GameDataLoaded.ceilings[0].enabled = seventhbit
+                    GameDataLoaded.ceilings[1].enabled = seventhbit
+                    GameDataLoaded.walls[0].enabled = seventhbit
+                    for (let i = 2; i < GameDataLoaded.floors.length; i++) {
+                        GameDataLoaded.floors[i].enabled = seventhbit
+                    }
+
+                    if (seventhbit) {
+                        drawSpriteSheet(TycoonSpritesheet, 600, 596, 0, 322, 1320, 344) //floor
+                    } else {
+                        drawSpriteSheet(TycoonSpritesheet, 600, 918, 0, 644, 1320, 22) //floor
+                    }
+
                     if (readBit(tycoondata, 0)) {
                         if (readBit(tycoondata, 1)) {
-                            if (currentTime - lastTycoonDrop >= 1000 && readBit(tycoondata, 2)) {
+                            if (dt < 250 && currentTime - lastTycoonDrop >= 1000 && readBit(tycoondata, 2)) {
                                 lastTycoonDrop = currentTime 
                             }
 
                             if (readBit(tycoondata, 3)) {
-                                drawSpriteSheet(TycoonSpritesheet, 737, 702, 0, 106, 100, 216) // dropper 1
+                                drawSpriteSheet(TycoonSpritesheet, 737, 702, 0, 106 + tycoonoffset, 100, 216) // dropper 1
                                 if (lastTycoonDrop == currentTime) {
-                                    tycoonblocks.push({x: 767, y: 732, value: 1})
+                                    tycoonblocks.push({x: 767, y: 732, value: 1, upgraded: false, floor: 1})
+                                }
+                            }
+                            if (readBit(tycoondata, 4)) {
+                                drawSpriteSheet(TycoonSpritesheet, 927, 702, 0, 106 + tycoonoffset, 100, 216) // dropper 2
+                                if (lastTycoonDrop == currentTime) {
+                                    tycoonblocks.push({x: 957, y: 732, value: 2, upgraded: false, floor: 1})
+                                }
+                            }
+                            if (readBit(tycoondata, 5)) {
+                                drawSpriteSheet(TycoonSpritesheet, 1117, 702, 0, 106 + tycoonoffset, 100, 216) // dropper 3
+                                if (lastTycoonDrop == currentTime) {
+                                    tycoonblocks.push({x: 1147, y: 732, value: 5, upgraded: false, floor: 1})
                                 }
                             }
 
@@ -1838,55 +2055,74 @@
                                 
                                 for (let i = 0; i < tycoonblocks.length; i++) {
                                     let data = tycoonblocks[i]
-                                    if (data.y < 782) {
+                                    if (data.y < 782 && data.floor == 1) {
                                         data.y += dt*400
-                                        if (data.y > 782) {
+                                        if (data.y > 782 && data.floor == 1) {
                                             data.y = 782
                                         } 
                                         tycoonblocks[i] = data
+                                        drawText(abbreviateToMoney(data.value), data.x + 20, data.y - 20, 40, "Arial", "#0d0", "center")
                                         drawRectangle(data.x, data.y, 40, 40, "#e00")
                                     } else {
-                                        data.x += dt*200
+                                        data.x += dt*285
                                         tycoonblocks[i] = data
                                         if (data.x > 1482) {
                                             config.TycoonPending += data.value
                                             tycoonblocks.splice(i, 1)
                                             i--
                                         } else {
+                                            if ((data.floor == 1 && readBit(tycoondata, 6) && data.x > 1307 && !data.upgraded)) {
+                                                data.upgraded = true
+                                                data.value *= 1.5
+                                            }
+                                            drawText(abbreviateToMoney(data.value), data.x + 20, data.y - 20, 40, "Arial", "#0d0", "center")
                                             drawRectangle(data.x, data.y, 40, 40, "#e00")
                                         }
                                     }
                                 }
-                            }
+                            }                            
 
-                            
+                            drawSpriteSheet(TycoonSpritesheet, 692, 792, 100, 196 + tycoonoffset, 952, 126) // conveyor
 
-                            drawSpriteSheet(TycoonSpritesheet, 692, 792, 100, 196, 952, 126) // conveyor
 
-                            if (!readBit(tycoondata, 3)) {
+                            if (readBit(tycoondata, 3)) {
+                                if (!seventhbit) {
+                                    tycoondata = makeTycoonButton(7, tycoondata)
+                                }
+                                if (readBit(tycoondata, 4)) {
+                                    if (readBit(tycoondata, 5)) {
+                                        if (readBit(tycoondata, 6)) {
+                                            drawSpriteSheet(TycoonSpritesheet, 1307, 702, 1320, 106 + tycoonoffset, 100, 216) // Upgrader 1
+                                        } else {
+                                            tycoondata = makeTycoonButton(6, tycoondata)
+                                        }
+                                    } else {
+                                        tycoondata = makeTycoonButton(5, tycoondata)
+                                    }
+                                } else {
+                                    tycoondata = makeTycoonButton(4, tycoondata)
+                                }
+                            } else {
                                 tycoondata = makeTycoonButton(3, tycoondata)
                             }
                         } else {
                             tycoondata = makeTycoonButton(1, tycoondata)
                         }
                         if (readBit(tycoondata, 2)) {
-                            drawSpriteSheet(TycoonSpritesheet, 1452, 679, 1052, 83, 268, 239) // collector
-                            cachedCollectorSize = drawBoundedText(abbreviateNumber(config.TycoonPending), 1088, 89, 196, 68, "Arial", "#ff0", "center", cachedCollectorSize) // text
+                            drawSpriteSheet(TycoonSpritesheet, 1452, 679, 1052, 83 + tycoonoffset, 268, 239) // collector
+                            const onbtn = (inRange(PlrY, 896, 926) && inRange(PlrX, 1464, 1708));
+                            config.TycoonMoney += onbtn ? config.TycoonPending : 0;
+                            config.TycoonPending *= onbtn ? 0 : 1;
+                            drawRectangle(1464, 885, 244, 21, (onbtn || config.TycoonPending == 0) ? "#d00" : "#0d0")
+                            cachedCollectorSize = drawBoundedText(abbreviateToMoney(config.TycoonPending), 1586, 787, 196, 68, "Arial", "#ff0", "center", cachedCollectorSize) // text
                         } else {
                             tycoondata = makeTycoonButton(2, tycoondata)
-                        }
-                        if (readBit(tycoondata, 5)) {
-
-                        } else {
-                            drawSpriteSheet(TycoonSpritesheet, 600, 918, 0, 0, 1320, 22) //floor
                         }
                     } else {
                         tycoondata = makeTycoonButton(0, tycoondata)
                     }
                     config.TycoonProgress = ChangeBase(tycoondata, 2, 16)
                 }
-
-
             }
             prevgame = Currentgame
 
@@ -1957,9 +2193,26 @@
                     escapemenu.style.display = escapemenudisplay = "none"
                 }
             } else {
-
                 if (GameDataLoaded) {
                     ctx.drawImage(GameDataLoaded.foreground, 0, 0)
+                }
+
+                /*
+                ###########
+                #INGAME UI#
+                ###########
+                */
+                if (Currentgame == 1) {
+                    // draw the tycoon money hud
+                    const abreviateMoney = abbreviateToMoney(config.TycoonMoney)
+                    const moneywidth = checkTextWidth(abreviateMoney, "Arial", 80)
+                    drawPolygon("#0009", "#000", 0,
+                        880 - moneywidth/2, 1080,
+                        960 - moneywidth/2, 1000,
+                        960 + moneywidth/2, 1000,
+                        1040 + moneywidth/2, 1080
+                    )
+                    drawText(abreviateMoney, 960, 1045, 80, "Arial", "#0d0", "center")
                 }
 
                 if ((chatopen && !EscapeMenuOpen ? "block" : "none" /* gets the target display type */) !== chatmenudisplay) {
