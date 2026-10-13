@@ -769,8 +769,6 @@
                     // 2. Inject the code text
                     script.textContent = fileRecord.code;
 
-                    script.type = "module"
-
                     // 3. Append it to the head tag (old scripts remain untouched)
                     document.getElementById("gamecontainer").appendChild(script);
                     
@@ -2003,9 +2001,12 @@
                     let icox = 235
                     let icoy = 120
                     for (const [key, item] of Object.entries(games)) {
-                        
-                        ctx.drawImage(item.icon, icox, icoy)
-                        mouseHitbox(icox, icoy, 240, 240, key)
+                        try {
+                            ctx.drawImage(item.icon, icox, icoy)
+                            mouseHitbox(icox, icoy, 240, 240, key)
+                        } catch(error) {
+                            continue
+                        }
 
                         icox += 240
                         if (icox > 1680) {

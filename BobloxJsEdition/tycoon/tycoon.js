@@ -27,10 +27,9 @@ async function loadAndInitializeAssets() {
 
     classicskybox = new Image();
     classicskybox.src = loadSavedImage(folderurl + "skybox1.png");
-    
-    // 4. (Optional) Trigger your engine's start/render loop here now that assets are ready
-    // engine.start();
+
 }
+
 
 // Execute the download and setup block
 loadAndInitializeAssets();
