@@ -1,22 +1,20 @@
-console.warn("test")
+//console.warn("test")
 const folderurl = "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@latest/BobloxJsEdition/tycoon/";
 
 // 1. Declare variables globally so the engine can always see them
 var tycoonforeground;
-var TycoonSpritesheet; // Keeping your mixed casing so references don't break
+var TycoonSpritesheet; 
 var tycoonICO;
 var classicskybox;
 
-function loadAndInitializeAssets() {
+function loadAndInitializeAssets(onCompleteCallback) {
     console.log("Syncing tycoon visual assets...");
 
-    // 1. Group your asset targets into variables
     const fgUrl = folderurl + "TycoonForeground.png";
     const bgUrl = folderurl + "TycoonBuilding.png";
     const iconUrl = folderurl + "tycoonIcon.png";
     const skyUrl = folderurl + "skybox1.png";
 
-    // 2. Fire all downloads simultaneously and wait for them to finish
     Promise.all([
         saveImageToStorage(fgUrl),
         saveImageToStorage(bgUrl),
@@ -25,156 +23,76 @@ function loadAndInitializeAssets() {
     ]).then(() => {
         console.log("All image assets safely locked into storage database!");
 
-        // 3. Assign the global engine variables safely using callbacks
+        // Initialize fresh HTML Image contexts
         tycoonforeground = new Image();
-        loadSavedImage(fgUrl, (src) => tycoonforeground.src = src);
-
         TycoonSpritesheet = new Image();
-        loadSavedImage(bgUrl, (src) => TycoonSpritesheet.src = src);
-
         tycoonICO = new Image();
-        loadSavedImage(iconUrl, (src) => tycoonICO.src = src);
-
         classicskybox = new Image();
+
+        // Track how many images have successfully parsed their source blobs
+        let imagesLoaded = 0;
+        const totalImages = 4;
+
+        function checkProgress() {
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) {
+                console.log("All image object blobs attached and rendered into RAM!");
+                if (typeof onCompleteCallback === "function") onCompleteCallback();
+            }
+        }
+
+        // Bind image event triggers to confirm structural readiness
+        tycoonforeground.onload = checkProgress;
+        TycoonSpritesheet.onload = checkProgress;
+        tycoonICO.onload = checkProgress;
+        classicskybox.onload = checkProgress;
+
+        // Assign sources asynchronously from IndexedDB blobs
+        loadSavedImage(fgUrl, (src) => tycoonforeground.src = src);
+        loadSavedImage(bgUrl, (src) => TycoonSpritesheet.src = src);
+        loadSavedImage(iconUrl, (src) => tycoonICO.src = src);
         loadSavedImage(skyUrl, (src) => classicskybox.src = src);
     });
 }
 
-// Execute the download and setup block
-loadAndInitializeAssets();
+// 2. Safely initialize the game metadata map profile ONLY after resources are mapped
+loadAndInitializeAssets(() => {
+    window.games = window.games || {};
+    
+    window.games["tycoon"] = {
+        functionName: "vanillatycoon",
+        width: 1920,
+        startposx: 90,
+        startposy: 940,
+        Size: 2.5,
+        Skybox: classicskybox,
+        foreground: tycoonforeground,
+        icon: tycoonICO,
+        gravity: 1930.44,
+        floors: [
+            { xstart: 0, xend: 1920, y: 940, enabled: true, passable: false, Ladder: false },
+            { xstart: 600, xend: 1920, y: 918, enabled: false, passable: false, Ladder: false },
+            { xstart: 600, xend: 1746, y: 596, enabled: false, passable: false, Ladder: false },
+            { xstart: 1896, xend: 1920, y: 596, enabled: false, passable: false, Ladder: false },
+            { xstart: 1746, xend: 1896, y: 885, enabled: false, passable: true, Ladder: true },
+            { xstart: 1746, xend: 1896, y: 839, enabled: false, passable: true, Ladder: true },
+            { xstart: 1746, xend: 1896, y: 793, enabled: false, passable: true, Ladder: true },
+            { xstart: 1746, xend: 1896, y: 747, enabled: false, passable: true, Ladder: true },
+            { xstart: 1746, xend: 1896, y: 701, enabled: false, passable: true, Ladder: true },
+            { xstart: 1746, xend: 1896, y: 655, enabled: false, passable: true, Ladder: true },
+            { xstart: 1746, xend: 1896, y: 609, enabled: false, passable: true, Ladder: true }
+        ],
+        ceilings: [
+            { xstart: 600, xend: 1746, y: 618, enabled: false },
+            { xstart: 1896, xend: 1920, y: 618, enabled: false }
+        ],
+        walls: [
+            { x: 1908, ystart: 596, yend: 918, width: 12, enabled: false },
+            { x: 1173, ystart: 596, yend: 618, width: 573, enabled: false }
+        ]
+    };
+});
 
-
-window.games["tycoon"] = {
-    functionName: "vanillatycoon",
-    width: 1920,
-    startposx: 90,
-    startposy: 940,
-    Size: 2.5,
-    Skybox: classicskybox,
-    foreground: tycoonforeground,
-    icon: tycoonICO,
-    gravity: 1930.44,
-    floors: [
-        {
-            xstart: 0,
-            xend: 1920,
-            y: 940,
-            enabled: true,
-            passable: false,
-            Ladder: false
-        },
-        {
-            xstart: 600,
-            xend: 1920,
-            y: 918,
-            enabled: false,
-            passable: false,
-            Ladder: false
-        },
-        {
-            xstart: 600,
-            xend: 1746,
-            y: 596,
-            enabled: false,
-            passable: false,
-            Ladder: false
-        },
-        {
-            xstart: 1896,
-            xend: 1920,
-            y: 596,
-            enabled: false,
-            passable: false,
-            Ladder: false
-        },
-        {
-            xstart: 1746,
-            xend: 1896,
-            y: 885,
-            enabled: false,
-            passable: true,
-            Ladder: true
-        },
-        {
-            xstart: 1746,
-            xend: 1896,
-            y: 839,
-            enabled: false,
-            passable: true,
-            Ladder: true
-        },
-        {
-            xstart: 1746,
-            xend: 1896,
-            y: 793,
-            enabled: false,
-            passable: true,
-            Ladder: true
-        },
-        {
-            xstart: 1746,
-            xend: 1896,
-            y: 747,
-            enabled: false,
-            passable: true,
-            Ladder: true
-        },
-        {
-            xstart: 1746,
-            xend: 1896,
-            y: 701,
-            enabled: false,
-            passable: true,
-            Ladder: true
-        },
-        {
-            xstart: 1746,
-            xend: 1896,
-            y: 655,
-            enabled: false,
-            passable: true,
-            Ladder: true
-        },
-        {
-            xstart: 1746,
-            xend: 1896,
-            y: 609,
-            enabled: false,
-            passable: true,
-            Ladder: true
-        }
-    ],
-    ceilings: [
-        {
-            xstart: 600,
-            xend: 1746,
-            y: 618,
-            enabled: false
-        },
-        {
-            xstart: 1896,
-            xend: 1920,
-            y: 618,
-            enabled: false
-        }
-    ],
-    walls: [
-        {
-            x: 1908,
-            ystart: 596,
-            yend: 918,
-            width: 12,
-            enabled: false
-        },
-        {
-            x: 1173,
-            ystart: 596,
-            yend: 618,
-            width: 573,
-            enabled: false
-        },
-    ]
-}
 
 let cachedCollectorSize = 0
 

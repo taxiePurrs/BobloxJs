@@ -671,7 +671,8 @@
 
     <script id="gameDB">
         window.gameurls = [
-            "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@latest/BobloxJsEdition/tycoon/tycoon.js"
+            "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@main/BobloxJsEdition/tycoon/tycoon.js"
+            //"./tycoon.js"
         ]
 
         let gameStorageDB;
@@ -818,20 +819,44 @@
         for (let i = 0; i < window.gameurls.length; i++) {
             const currentUrl = window.gameurls[i];
 
-            // 1. Trigger the download/update check
-            saveScriptToStorage(currentUrl).then((downloadSuccessful) => {
-                if (downloadSuccessful) {
-                    console.log(`Update checked/saved for: ${currentUrl}`);
-                } else {
-                    console.log(`Offline or failed to update. Loading last saved copy for: ${currentUrl}`);
-                }
+            // Check if the current game link is a remote web URL
+            const isRemoteUrl = currentUrl.startsWith('http://') || currentUrl.startsWith('https://');
 
-                // 2. This code runs ONLY after saveScriptToStorage completely finishes
-                loadScriptFromStorage(currentUrl, () => {
-                    console.log(`Engine loaded and parsed script into memory: ${currentUrl}`);
+            if (isRemoteUrl) {
+                // --- CASE 1: REMOTE WEB URL ---
+                // Trigger the network download/update check first
+                saveScriptToStorage(currentUrl).then((downloadSuccessful) => {
+                    if (downloadSuccessful) {
+                        console.log(`Update checked/saved for: ${currentUrl}`);
+                    } else {
+                        console.log(`Offline or failed to update. Loading last saved copy for: ${currentUrl}`);
+                    }
+
+                    // Load it out of IndexedDB once the network check resolves
+                    loadScriptFromStorage(currentUrl, () => {
+                        console.log(`Engine loaded and parsed script into memory: ${currentUrl}`);
+                    });
                 });
-            });
+            } else {
+                // --- CASE 2: LOCAL FILEPATH ---
+                console.log(`Detected local file path: ${currentUrl}. Skipping network storage pipeline.`);
+
+                // Dynamically create a standard HTML script element to inject the local file path directly
+                const script = document.createElement("script");
+                script.src = currentUrl;
+
+                script.onload = () => {
+                    console.log(`Engine loaded and parsed local path script into memory: ${currentUrl}`);
+                };
+
+                script.onerror = () => {
+                    console.error(`Failed to locate local script path: ${currentUrl}`);
+                };
+
+                document.head.appendChild(script);
+            }
         }
+
 
 
     </script>
@@ -2043,12 +2068,12 @@
                     let icox = 235
                     let icoy = 120
                     for (const [key, item] of Object.entries(games)) {
-                        try {
-                            ctx.drawImage(item.icon, icox, icoy)
+                        //try {
+                            ctx.drawImage(item["icon"], icox, icoy)
                             mouseHitbox(icox, icoy, 240, 240, key)
-                        } catch (error) {
+                        /*} catch (error) {
                             continue
-                        }
+                        }*/
 
                         icox += 240
                         if (icox > 1680) {
