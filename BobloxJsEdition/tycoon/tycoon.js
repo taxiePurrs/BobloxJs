@@ -1,12 +1,12 @@
-console.warn("hi")
 window.games["tycoon"] = {
     functionName: "vanillatycoon",
     width: 1920,
     startposx: 90,
     startposy: 940,
     Size: 2.5,
-    Skybox: skybox1,
-    foreground: foreground1,
+    Skybox: classicskybox,
+    foreground: tycoonforeground,
+    icon: tycoonICO,
     gravity: 1930.44,
     floors: [
         {
@@ -129,6 +129,26 @@ window.games["tycoon"] = {
         },
     ]
 }
+
+const folderurl = "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@latest/BobloxJsEdition/tycoon/"
+
+await saveImageToStorage(folderurl+"TycoonForeground.png")
+await saveImageToStorage(folderurl+"TycoonBuilding.png")
+await saveImageToStorage(folderurl+"tycoonIcon.png")
+await saveImageToStorage(folderurl+"skybox1.png")
+
+var tycoonforeground = new Image()
+tycoonforeground.src = loadSavedImage(folderurl+"TycoonForeground.png")
+
+let TycoonSpritesheet = new Image()
+TycoonSpritesheet.src = loadSavedImage(folderurl+"TycoonBuilding.png")
+
+var tycoonICO = new Image()
+tycoonICO.src = loadSavedImage(folderurl+"tycoonIcon.png")
+
+var classicskybox = new Image()
+classicskybox.src = loadSavedImage(folderurl+"skybox1.png")
+
 
 let cachedCollectorSize = 0
 

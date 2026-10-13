@@ -285,7 +285,93 @@
     </div>
     </div>
 
-    <script id="engineapi">
+    <script>
+        (function () {
+
+            const screenConsole = document.getElementById('game-console'); //fetch the gui console 
+
+            //define the original outputs for the cosole
+            const originalLog = console.log;
+            const originalWarn = console.warn;
+            const originalError = console.error;
+
+
+            function safePrintToScreen(messageArray, color = "#4CAF50") {
+                try {
+                    if (!screenConsole) return;
+
+                    // Convert arguments to safe strings. 
+                    // If someone passes a circular object or an invalid variable, this prevents a crash.
+                    let parsedMessage = messageArray.map(arg => {
+                        if (typeof arg === 'object' && arg !== null) {
+                            try {
+                                return JSON.stringify(arg); // Convert object to text safely
+                            } catch (e) {
+                                return "[Unprintable Complex Object]";
+                            }
+                        }
+                        return String(arg); // Convert numbers/strings safely
+                    }).join(' ');
+
+                    // Remove formatting flags so they don't break the HTML layout
+                    const cleanMessage = parsedMessage.replace(/%c/g, '');
+
+                    // Safely update the HTML
+                    screenConsole.innerHTML += `<div style="color: ${color}">> ${cleanMessage}</div>`;
+                    screenConsole.scrollTop = screenConsole.scrollHeight; // Keep scrolled to bottom
+                } catch (fatalConsoleError) {
+                    // If the screen logger itself breaks, do absolutely nothing.
+                    // This prevents a logger error from ever crashing your actual game loop.
+                }
+            }
+
+            // 1. Intercept Standard Uncaught Errors (e.g., "variable is not defined")
+            window.addEventListener("error", (event) => {
+                // Format a clean, human-readable error log for the gui console
+                const cleanErrorMsg = `[CRASH AVOIDED] Line ${event.lineno}: ${event.message}`;
+
+                if (typeof console.error === 'function') {
+                    console.error(cleanErrorMsg);
+                }
+
+                // Returning TRUE stops the browser from throwing a fatal crash
+                return true;
+            });
+
+            // 2. Intercept Broken Asynchronous Promises (e.g., Network/PeerJS timeouts)
+            window.onunhandledrejection = function (event) {
+                const cleanRejectMsg = `[ASYNC CRASH AVOIDED]: ${event.reason}`;
+
+                if (typeof console.error === 'function') {
+                    console.error(cleanRejectMsg);
+                }
+
+                // Prevent the default browser console thread crash sequence
+                event.preventDefault();
+            };
+
+
+            // Overwrite the console channels with protected wrappers
+            console.log = function (...args) {
+                originalLog.apply(console, args); // Still print to real hidden console
+                safePrintToScreen(args, "#4CAF50");
+            };
+
+            console.warn = function (...args) {
+                originalWarn.apply(console, args); // Still warn to real hidden console
+                safePrintToScreen(args, "#FF9800");
+            };
+
+            console.error = function (...args) {
+                originalError.apply(console, args); // Guess what this does
+                safePrintToScreen(args, "#FF5252");
+            };
+        })();
+
+    </script>
+
+
+    <script id="engineapi" type="module">
         window.canvas = document.getElementById("canvas")
         window.ctx = window.canvas.getContext('2d');
 
@@ -478,12 +564,12 @@
 
         window.mouseHitbox = function (X, Y, Width, Height, ID) {
             if (window.mousex > X && window.mousex < X + Width && window.mousey > Y && window.mousey < Y + Height) {
-                window.MouseHover = ID
+                MouseHover = ID
             }
         }
         window.circularMouseHitbox = function (X, Y, Radius, ID) {
             if (Math.hypot(X - window.mousex, Y - window.mousey) <= Radius) {
-                window.MouseHover = ID
+                MouseHover = ID
             }
         }
 
@@ -573,6 +659,46 @@
             str = "0".repeat(Math.max(bit - str.length + 1, 0)) + str // 0th index, 1 length, add 5, 5th index 6 length
             return str.split("").with(-(bit + 1), String(val)).join("");
         }
+
+        window.saveImageToStorage = async function (imageUrl) {
+            try {
+                // 1. Fetch the image file from your asset folder
+                const response = await fetch(imageUrl);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                // 2. Convert the response directly into a Binary Blob
+                const imageBlob = await response.blob();
+
+                // 3. Store the binary image blob directly into IndexedDB
+                const transaction = gameStorageDB.transaction(["gameFiles"], "readwrite");
+                const store = transaction.objectStore("gameFiles");
+                store.put({ url: imageUrl, code: imageBlob, savedAt: Date.now() });
+
+                return true;
+            } catch (error) {
+                console.error("Failed to store asset:", error);
+                return false;
+            }
+        }
+
+        window.loadSavedImage = function (imageUrl) {
+            const transaction = gameStorageDB.transaction(["gameFiles"], "readonly");
+            const store = transaction.objectStore("gameFiles");
+            const getRequest = store.get(imageUrl);
+
+            getRequest.onsuccess = () => {
+                const fileRecord = getRequest.result;
+
+                if (fileRecord && fileRecord.code) {
+                    // Convert the stored binary blob back into a usable URL source
+                    return URL.createObjectURL(fileRecord.code);
+
+                    console.log("Spritesheet texture mapping linked offline!");
+                }
+            };
+        }
+
+
     </script>
 
     <script id="initialize">
@@ -581,13 +707,9 @@
         }
     </script>
 
-    <div id="games">
-
-    </div>
-
-    <script id="gameDB">
+    <script id="gameDB" type="module">
         window.gameurls = [
-            "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@latest/BobloxJsEdition/tycoon.js"
+            "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@latest/BobloxJsEdition/tycoon/tycoon.js"
         ]
 
         let gameStorageDB;
@@ -661,10 +783,12 @@
         }
 
 
-        for (let i = 0; i < window.gameurls; i++) {
+        for (let i = 0; i < window.gameurls.length; i++) {
+            console.log(window.gameurls[i] + " stage 1")
             await saveScriptToStorage(window.gameurls[i])
-
+            console.log(window.gameurls[i] + " stage 2")
             loadScriptFromStorage(window.gameurls[i])
+            console.log(window.gameurls[i] + " stage 3")
         }
 
     </script>
@@ -681,311 +805,226 @@
     </script>
 
     <script>
+            // this is extracted code from CloudLink Delta https://github.com/cloudlink-delta
             (function () {
+                // 1. Establish the fallback layer instantly to protect the game loop
+                class FallbackOfflineLink {
+                    constructor() {
+                        this.isOnline = false;
+                        console.log("[Engine Cloud] Initialized in Local Offline Mode.");
+                    }
+                    broadcast() { /* Drops outbound network ticks silently when offline */ }
+                    connectToPeer() { console.warn("Network unavailable. Cannot link players."); return null; }
+                }
 
-                const screenConsole = document.getElementById('game-console'); //fetch the gui console 
+                // Assign baseline safety net variable immediately
+                window.cldelta = new FallbackOfflineLink();
 
-                //define the original outputs for the cosole
-                const originalLog = console.log;
-                const originalWarn = console.warn;
-                const originalError = console.error;
+                // Integrated official v1.5.5 script link priority array
+                const PEERJS_SOURCES = [
+                    'https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js',
+                    'https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js'
+                ];
 
+                // 2. Real networking controller executed only if a library path resolves completely
+                class CloudLinkDeltaStandalone {
+                    constructor() {
+                        this.peer = null;
+                        this.name = '';
+                        this.dataConnections = new Map();
+                        this.newestConnected = '';
+                        this.lastDisconnected = '';
+                        this.peerStatus = 'idle';
+                        this.verboseLogs = false;
 
-                function safePrintToScreen(messageArray, color = "#4CAF50") {
-                    try {
-                        if (!screenConsole) return;
-
-                        // Convert arguments to safe strings. 
-                        // If someone passes a circular object or an invalid variable, this prevents a crash.
-                        let parsedMessage = messageArray.map(arg => {
-                            if (typeof arg === 'object' && arg !== null) {
-                                try {
-                                    return JSON.stringify(arg); // Convert object to text safely
-                                } catch (e) {
-                                    return "[Unprintable Complex Object]";
-                                }
+                        // Extracted official cloud signaling architecture parameters
+                        this.sessionServer = {
+                            host: 'peerjs.mikedev101.cc',
+                            port: 443,
+                            secure: true,
+                            path: '/',
+                            key: 'peerjs',
+                            config: {
+                                iceTransportPolicy: 'all',
+                                iceServers: [
+                                    // Safe, globally whitelisted STUN servers that school filters never block
+                                    { urls: 'stun:google.com' },
+                                    { urls: 'stun:google.com' },
+                                    { urls: 'stun:google.com' },
+                                    { urls: 'stun:cloudflare.com' }
+                                ]
                             }
-                            return String(arg); // Convert numbers/strings safely
-                        }).join(' ');
+                        };
 
-                        // Remove formatting flags so they don't break the HTML layout
-                        const cleanMessage = parsedMessage.replace(/%c/g, '');
 
-                        // Safely update the HTML
-                        screenConsole.innerHTML += `<div style="color: ${color}">> ${cleanMessage}</div>`;
-                        screenConsole.scrollTop = screenConsole.scrollHeight; // Keep scrolled to bottom
-                    } catch (fatalConsoleError) {
-                        // If the screen logger itself breaks, do absolutely nothing.
-                        // This prevents a logger error from ever crashing your actual game loop.
-                    }
-                }
-
-                // 1. Intercept Standard Uncaught Errors (e.g., "variable is not defined")
-                window.addEventListener("error", (event) => {
-                    // Format a clean, human-readable error log for the gui console
-                    const cleanErrorMsg = `[CRASH AVOIDED] Line ${event.lineno}: ${event.message}`;
-
-                    if (typeof console.error === 'function') {
-                        console.error(cleanErrorMsg);
+                        this.gmsg_state = new Map(); // Global Message state
+                        this.pmsg_state = new Map(); // Private Message state
                     }
 
-                    // Returning TRUE stops the browser from throwing a fatal crash
-                    return true;
-                });
-
-                // 2. Intercept Broken Asynchronous Promises (e.g., Network/PeerJS timeouts)
-                window.onunhandledrejection = function (event) {
-                    const cleanRejectMsg = `[ASYNC CRASH AVOIDED]: ${event.reason}`;
-
-                    if (typeof console.error === 'function') {
-                        console.error(cleanRejectMsg);
-                    }
-
-                    // Prevent the default browser console thread crash sequence
-                    event.preventDefault();
-                };
-
-
-                // Overwrite the console channels with protected wrappers
-                console.log = function (...args) {
-                    originalLog.apply(console, args); // Still print to real hidden console
-                    safePrintToScreen(args, "#4CAF50");
-                };
-
-                console.warn = function (...args) {
-                    originalWarn.apply(console, args); // Still warn to real hidden console
-                    safePrintToScreen(args, "#FF9800");
-                };
-
-                console.error = function (...args) {
-                    originalError.apply(console, args); // Guess what this does
-                    safePrintToScreen(args, "#FF5252");
-                };
-            })();
-
-    </script>
-
-    <script>
-        // this is extracted code from CloudLink Delta https://github.com/cloudlink-delta
-        (function () {
-            // 1. Establish the fallback layer instantly to protect the game loop
-            class FallbackOfflineLink {
-                constructor() {
-                    this.isOnline = false;
-                    console.log("[Engine Cloud] Initialized in Local Offline Mode.");
-                }
-                broadcast() { /* Drops outbound network ticks silently when offline */ }
-                connectToPeer() { console.warn("Network unavailable. Cannot link players."); return null; }
-            }
-
-            // Assign baseline safety net variable immediately
-            window.cldelta = new FallbackOfflineLink();
-
-            // Integrated official v1.5.5 script link priority array
-            const PEERJS_SOURCES = [
-                'https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js',
-                'https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js'
-            ];
-
-            // 2. Real networking controller executed only if a library path resolves completely
-            class CloudLinkDeltaStandalone {
-                constructor() {
-                    this.peer = null;
-                    this.name = '';
-                    this.dataConnections = new Map();
-                    this.newestConnected = '';
-                    this.lastDisconnected = '';
-                    this.peerStatus = 'idle';
-                    this.verboseLogs = false;
-
-                    // Extracted official cloud signaling architecture parameters
-                    this.sessionServer = {
-                        host: 'peerjs.mikedev101.cc',
-                        port: 443,
-                        secure: true,
-                        path: '/',
-                        key: 'peerjs',
-                        config: {
-                            iceTransportPolicy: 'all',
-                            iceServers: [
-                                // Safe, globally whitelisted STUN servers that school filters never block
-                                { urls: 'stun:google.com' },
-                                { urls: 'stun:google.com' },
-                                { urls: 'stun:google.com' },
-                                { urls: 'stun:cloudflare.com' }
-                            ]
+                    connect(username) {
+                        if (!username || username.trim() === "") {
+                            console.error("[CLΔ Standalone] Username cannot be empty.");
+                            return;
                         }
-                    };
+                        this.peerStatus = 'connecting';
+                        this.name = username.trim();
+
+                        try {
+                            this.peer = new Peer(this.name, {
+                                host: this.sessionServer.host,
+                                port: this.sessionServer.port,
+                                secure: this.sessionServer.secure,
+                                path: this.sessionServer.path,
+                                key: this.sessionServer.key,
+                                config: this.sessionServer.config,
+                                debug: this.verboseLogs ? 3 : 1
+                            });
+                            this.attachSignalHandlers();
+                        } catch (e) {
+                            this.peerStatus = 'error';
+                            console.error("[CLΔ Standalone] Instantiation step failed:", e);
+                        }
+                    }
+
+                    attachSignalHandlers() {
+                        this.peer.on('open', (id) => {
+                            this.peerStatus = 'open';
+                            this.isOnline = true;
+                            console.log(`%c[CLΔ Engine] Connected to matchmaker! Player Session ID: ${id}`);
+                            if (typeof window.onEngineNetworkOpen === 'function') window.onEngineNetworkOpen(id);
+                        });
+
+                        this.peer.on('connection', (conn) => {
+                            this.dataConnections.set(conn.peer, conn);
+                            this.bindConnectionChannels(conn);
+                        });
+
+                        this.peer.on('disconnected', () => {
+                            this.peerStatus = 'disconnected';
+                            this.isOnline = false;
+                            console.warn("[CLΔ Engine] Disconnected from signaling nodes.");
+                        });
+
+                        this.peer.on('error', (err) => {
+                            this.peerStatus = 'error';
+                            this.isOnline = false;
+                            console.error("[CLΔ Engine] Internal pipeline error:", err);
+                        });
+                    }
+
+                    bindConnectionChannels(conn) {
+                        conn.on('open', () => {
+                            this.newestConnected = conn.peer;
+                            console.log(`[CLΔ Engine] Target peer linked successfully: ${conn.peer}`);
+
+                            // Perform official CLD Protocol initialization packet broadcast handshake
+                            conn.send(JSON.stringify({
+                                opcode: 'NEGOTIATE',
+                                ttl: 1,
+                                payload: { version: { major: 1, minor: 0, patch: 0 }, spec_version: 0 }
+                            }));
+
+                            if (typeof window.onPeerLinked === 'function') window.onPeerLinked(conn.peer);
+                        });
+
+                        conn.on('data', (raw) => {
+                            try {
+                                const packet = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                                this.routeIncomingProtocol(conn.peer, packet);
+                            } catch (err) {
+                                console.error("[CLΔ Engine] Error parsing network data packet:", err);
+                            }
+                        });
+
+                        conn.on('close', () => {
+                            this.lastDisconnected = conn.peer;
+                            this.dataConnections.delete(conn.peer);
+                            console.log(`[CLΔ Engine] Peer dropped connection: ${conn.peer}`);
+                            if (typeof window.onPeerDropped === 'function') window.onPeerDropped(conn.peer);
+                        });
+                    }
+
+                    routeIncomingProtocol(sender, packet) {
+                        const { opcode, payload } = packet;
+
+                        switch (opcode) {
+                            case 'G_MSG': // Global Network Packet Broadcast updates
+                                this.gmsg_state.set('default', payload);
+                                if (typeof window.routeIncomingGameData === 'function') {
+                                    window.routeIncomingGameData({ type: 'BROADCAST', from: sender, data: payload });
+                                }
+                                break;
+
+                            case 'P_MSG': // Private Peer targeted messaging frames
+                                if (!this.pmsg_state.has(sender)) this.pmsg_state.set(sender, new Map());
+                                this.pmsg_state.get(sender).set('default', payload);
+                                if (typeof window.routeIncomingGameData === 'function') {
+                                    window.routeIncomingGameData({ type: 'PRIVATE', from: sender, data: payload });
+                                }
+                                break;
+
+                            default:
+                                break;
+                        }
+                    }
+
+                    connectToPeer(targetId) {
+                        if (!this.peer || this.peer.destroyed) return null;
+
+                        // Simplifies connection execution loops to protect Chromebook sandboxes
+                        const conn = this.peer.connect(targetId);
+
+                        this.dataConnections.set(targetId, conn);
+                        this.bindConnectionChannels(conn);
+                        return conn;
+                    }
 
 
-                    this.gmsg_state = new Map(); // Global Message state
-                    this.pmsg_state = new Map(); // Private Message state
+                    broadcast(message) {
+                        const packet = { opcode: 'G_MSG', origin: this.name, ttl: 1, target: '*', payload: message };
+                        for (const [peerId, conn] of this.dataConnections) {
+                            if (conn.open) conn.send(JSON.stringify(packet));
+                        }
+                    }
+
+                    sendPrivate(targetId, message) {
+                        const packet = { opcode: 'P_MSG', origin: this.name, ttl: 1, target: targetId, payload: message };
+                        const conn = this.dataConnections.get(targetId);
+                        if (conn && conn.open) conn.send(JSON.stringify(packet));
+                    }
                 }
 
-                connect(username) {
-                    if (!username || username.trim() === "") {
-                        console.error("[CLΔ Standalone] Username cannot be empty.");
+                // 3. Dynamic Sequential Loader Loop matching the original fallback array scheme
+                async function loadPeerInfrastructure(index = 0) {
+                    if (index >= PEERJS_SOURCES.length) {
+                        console.warn("[CLΔ Core Loader] All CDN routes exhausted. Staying in offline sandbox mode.");
                         return;
                     }
-                    this.peerStatus = 'connecting';
-                    this.name = username.trim();
 
-                    try {
-                        this.peer = new Peer(this.name, {
-                            host: this.sessionServer.host,
-                            port: this.sessionServer.port,
-                            secure: this.sessionServer.secure,
-                            path: this.sessionServer.path,
-                            key: this.sessionServer.key,
-                            config: this.sessionServer.config,
-                            debug: this.verboseLogs ? 3 : 1
-                        });
-                        this.attachSignalHandlers();
-                    } catch (e) {
-                        this.peerStatus = 'error';
-                        console.error("[CLΔ Standalone] Instantiation step failed:", e);
-                    }
-                }
+                    const scriptUrl = PEERJS_SOURCES[index];
+                    const scriptEl = document.createElement('script');
 
-                attachSignalHandlers() {
-                    this.peer.on('open', (id) => {
-                        this.peerStatus = 'open';
-                        this.isOnline = true;
-                        console.log(`%c[CLΔ Engine] Connected to matchmaker! Player Session ID: ${id}`);
-                        if (typeof window.onEngineNetworkOpen === 'function') window.onEngineNetworkOpen(id);
-                    });
+                    // NEW CRITICAL LINE: This tells the browser to unmute the errors for this file!
+                    scriptEl.crossOrigin = "anonymous";
+                    scriptEl.src = scriptUrl;
 
-                    this.peer.on('connection', (conn) => {
-                        this.dataConnections.set(conn.peer, conn);
-                        this.bindConnectionChannels(conn);
-                    });
+                    scriptEl.onload = function () {
+                        window.cldelta = new CloudLinkDeltaStandalone();
+                        console.log(`[CLΔ Core Loader] Infrastructure bound successfully via index ${index}`);
+                    };
 
-                    this.peer.on('disconnected', () => {
-                        this.peerStatus = 'disconnected';
-                        this.isOnline = false;
-                        console.warn("[CLΔ Engine] Disconnected from signaling nodes.");
-                    });
+                    scriptEl.onerror = function () {
+                        console.warn(`[CLΔ Core Loader] Route failed to resolve: ${scriptUrl}. Switching targets...`);
+                        loadPeerInfrastructure(index + 1);
+                    };
 
-                    this.peer.on('error', (err) => {
-                        this.peerStatus = 'error';
-                        this.isOnline = false;
-                        console.error("[CLΔ Engine] Internal pipeline error:", err);
-                    });
-                }
-
-                bindConnectionChannels(conn) {
-                    conn.on('open', () => {
-                        this.newestConnected = conn.peer;
-                        console.log(`[CLΔ Engine] Target peer linked successfully: ${conn.peer}`);
-
-                        // Perform official CLD Protocol initialization packet broadcast handshake
-                        conn.send(JSON.stringify({
-                            opcode: 'NEGOTIATE',
-                            ttl: 1,
-                            payload: { version: { major: 1, minor: 0, patch: 0 }, spec_version: 0 }
-                        }));
-
-                        if (typeof window.onPeerLinked === 'function') window.onPeerLinked(conn.peer);
-                    });
-
-                    conn.on('data', (raw) => {
-                        try {
-                            const packet = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                            this.routeIncomingProtocol(conn.peer, packet);
-                        } catch (err) {
-                            console.error("[CLΔ Engine] Error parsing network data packet:", err);
-                        }
-                    });
-
-                    conn.on('close', () => {
-                        this.lastDisconnected = conn.peer;
-                        this.dataConnections.delete(conn.peer);
-                        console.log(`[CLΔ Engine] Peer dropped connection: ${conn.peer}`);
-                        if (typeof window.onPeerDropped === 'function') window.onPeerDropped(conn.peer);
-                    });
-                }
-
-                routeIncomingProtocol(sender, packet) {
-                    const { opcode, payload } = packet;
-
-                    switch (opcode) {
-                        case 'G_MSG': // Global Network Packet Broadcast updates
-                            this.gmsg_state.set('default', payload);
-                            if (typeof window.routeIncomingGameData === 'function') {
-                                window.routeIncomingGameData({ type: 'BROADCAST', from: sender, data: payload });
-                            }
-                            break;
-
-                        case 'P_MSG': // Private Peer targeted messaging frames
-                            if (!this.pmsg_state.has(sender)) this.pmsg_state.set(sender, new Map());
-                            this.pmsg_state.get(sender).set('default', payload);
-                            if (typeof window.routeIncomingGameData === 'function') {
-                                window.routeIncomingGameData({ type: 'PRIVATE', from: sender, data: payload });
-                            }
-                            break;
-
-                        default:
-                            break;
-                    }
-                }
-
-                connectToPeer(targetId) {
-                    if (!this.peer || this.peer.destroyed) return null;
-
-                    // Simplifies connection execution loops to protect Chromebook sandboxes
-                    const conn = this.peer.connect(targetId);
-
-                    this.dataConnections.set(targetId, conn);
-                    this.bindConnectionChannels(conn);
-                    return conn;
+                    document.head.appendChild(scriptEl);
                 }
 
 
-                broadcast(message) {
-                    const packet = { opcode: 'G_MSG', origin: this.name, ttl: 1, target: '*', payload: message };
-                    for (const [peerId, conn] of this.dataConnections) {
-                        if (conn.open) conn.send(JSON.stringify(packet));
-                    }
-                }
-
-                sendPrivate(targetId, message) {
-                    const packet = { opcode: 'P_MSG', origin: this.name, ttl: 1, target: targetId, payload: message };
-                    const conn = this.dataConnections.get(targetId);
-                    if (conn && conn.open) conn.send(JSON.stringify(packet));
-                }
-            }
-
-            // 3. Dynamic Sequential Loader Loop matching the original fallback array scheme
-            async function loadPeerInfrastructure(index = 0) {
-                if (index >= PEERJS_SOURCES.length) {
-                    console.warn("[CLΔ Core Loader] All CDN routes exhausted. Staying in offline sandbox mode.");
-                    return;
-                }
-
-                const scriptUrl = PEERJS_SOURCES[index];
-                const scriptEl = document.createElement('script');
-
-                // NEW CRITICAL LINE: This tells the browser to unmute the errors for this file!
-                scriptEl.crossOrigin = "anonymous";
-                scriptEl.src = scriptUrl;
-
-                scriptEl.onload = function () {
-                    window.cldelta = new CloudLinkDeltaStandalone();
-                    console.log(`[CLΔ Core Loader] Infrastructure bound successfully via index ${index}`);
-                };
-
-                scriptEl.onerror = function () {
-                    console.warn(`[CLΔ Core Loader] Route failed to resolve: ${scriptUrl}. Switching targets...`);
-                    loadPeerInfrastructure(index + 1);
-                };
-
-                document.head.appendChild(scriptEl);
-            }
-
-
-            // Initiate the sequential load process automatically on boot up
-            loadPeerInfrastructure(0);
-        })();
+                // Initiate the sequential load process automatically on boot up
+                loadPeerInfrastructure(0);
+            })();
     </script>
 
 
@@ -1196,6 +1235,7 @@
         };
 
     </script>
+
     <script>
 
         function isFocused(obj) {
@@ -1452,15 +1492,6 @@
             );
         }
 
-        let skybox1 = new Image()
-        loadImage(skybox1, "skybox1.png")
-
-        let foreground1 = new Image()
-        loadImage(foreground1, "TycoonForeground.png")
-
-        let TycoonSpritesheet = new Image()
-        loadImage(TycoonSpritesheet, "TycoonBuilding.png")
-
         let currentfloor = 0
 
         let EscapeMenuOpen = false
@@ -1485,33 +1516,34 @@
 
         //click detection
         canvas.addEventListener("click", (event) => {
-            if (window.MouseHover === null) {
+            if (MouseHover === null) {
                 EscapeMenuOpen = false
             }
             if (isFocused(canvas)) {
-                if (window.MouseHover == "Logo") {
+                if (MouseHover == "Logo") {
                     window.open("https://github.com/taxiePurrs/BobloxJs", '_blank').focus();
-                } else if (window.MouseHover == "Tycoonicon") {
-                    Currentgame = "tycoon"
-                } else if (window.MouseHover == "OpenEscape") {
+                } else if (MouseHover == "OpenEscape") {
                     EscapeMenuOpen = !EscapeMenuOpen
-                } else if (window.MouseHover == "OpenChat") {
+                } else if (MouseHover == "OpenChat") {
                     chatopen = !chatopen
-                } else if (window.MouseHover == "HomeTab") {
+                } else if (MouseHover == "HomeTab") {
                     menu = 0
-                } else if (window.MouseHover == "SettingsTab") {
+                } else if (MouseHover == "SettingsTab") {
                     menu = 1
-                } else if (window.MouseHover == "ToggleBlur") {
+                } else if (MouseHover == "ToggleBlur") {
                     window.gameconfig.BackgroundBlur = !window.gameconfig.BackgroundBlur
                     saveConfigValue("BackgroundBlur", window.gameconfig.BackgroundBlur)
                     someconfigsupdate()
-                } else if (window.MouseHover == "ToggleDebug") {
+                } else if (MouseHover == "ToggleDebug") {
                     window.gameconfig.Debug = !window.gameconfig.Debug
                     saveConfigValue("Debug", window.gameconfig.Debug)
-                } else if (window.MouseHover == "ToggleFPS") {
+                } else if (MouseHover == "ToggleFPS") {
                     window.gameconfig.ShowFPS = !window.gameconfig.ShowFPS
                     saveConfigValue("ShowFPS", window.gameconfig.ShowFPS)
+                } else if (games[MouseHover] !== undefined) {
+                    Currentgame = MouseHover;
                 }
+
             }
         })
 
@@ -1771,7 +1803,7 @@
             lastTime = currentTime;
 
             //set reset hovering id
-            window.MouseHover = null
+            MouseHover = null
             let leftrightbias = 0
 
             animationClock = Math.max(animationClock - dt * ((characterState == "Walking") ? (speed / 50) : 1), 0)
@@ -1967,10 +1999,18 @@
                 mouseHitbox(395, 40, 60, 60, "SettingsTab")
 
                 if (menu == 0) {
-                    //draw games on home menu
-                    window.drawSpriteSheet(UISheet, 235, 120, 0, 90, 240, 240)
-                    //window.ctx.drawImage(tycoonico, 235, 120, 240, 240)
-                    mouseHitbox(235, 120, 240, 240, "Tycoonicon")
+                    let icox = 235
+                    let icoy = 120
+                    for (const [key, item] of Object.entries(games)) {
+                        ctx.drawImage(item.icon, icox, icoy)
+                        mouseHitbox(icox, icoy, 240, 240, key)
+
+                        icox += 240
+                        if (icox > 1680) {
+                            icox = 235
+                            icoy += 240
+                        } 
+                    }
                 } else if (menu == 1) {
                     // toggle background blur
                     window.drawSpriteSheet(UISheet, 235, 120, 0, window.gameconfig.BackgroundBlur ? 60 : 30, 60, 30)
@@ -2017,13 +2057,13 @@
 
                 //draw the Boblox escape menu button
                 circularMouseHitbox(35, 35, 25, "OpenEscape")
-                drawRoundedRectangle(10, 10, 50, 50, 25, (window.MouseHover == "OpenEscape" && !EscapeMenuOpen) ? "#9999" : "#0009")
+                drawRoundedRectangle(10, 10, 50, 50, 25, (MouseHover == "OpenEscape" && !EscapeMenuOpen) ? "#9999" : "#0009")
                 window.drawSpriteSheet(UISheet, 20, 20, 30, 0, 30, 30)
 
 
                 //draw the chat button
                 circularMouseHitbox(95, 35, 25, "OpenChat")
-                drawRoundedRectangle(70, 10, 50, 50, 25, (window.MouseHover == "OpenChat" && !EscapeMenuOpen) ? "#9999" : "#0009")
+                drawRoundedRectangle(70, 10, 50, 50, 25, (MouseHover == "OpenChat" && !EscapeMenuOpen) ? "#9999" : "#0009")
                 window.drawSpriteSheet(UISheet, 80, 20, chatopen ? 410 : 380, 0, 30, 30)
 
                 //draw the escape menu
@@ -2032,7 +2072,7 @@
                 }
                 if (escapemenuY < 1080) {
                     if (EscapeMenuOpen) {
-                        window.MouseHover = null
+                        MouseHover = null
                         mouseHitbox((canvas.width - 1280) / 2, escapemenuY, 1280, 840, "EscapeBackground")
                     }
                     escapemenu.style.top = (escapemenuY / canvas.height * 100) + "%"
@@ -2044,7 +2084,7 @@
 
 
             //draw the cursor
-            canvas.style.cursor = !(window.MouseHover == null || window.MouseHover == "EscapeBackground") ? "var(--cursor2)" : "var(--cursor1)"
+            canvas.style.cursor = !(MouseHover == null || MouseHover == "EscapeBackground") ? "var(--cursor2)" : "var(--cursor1)"
 
             if (window.gameconfig.ShowFPS && window.gameconfig.Debug) {
                 drawText(
