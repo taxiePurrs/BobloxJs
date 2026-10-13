@@ -1,3 +1,4 @@
+console.warn("test")
 const folderurl = "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@latest/BobloxJsEdition/tycoon/";
 
 // 1. Declare variables globally so the engine can always see them
@@ -9,10 +10,10 @@ var classicskybox;
 async function loadAndInitializeAssets() {
     // 2. Wait for all downloads to finish saving to storage simultaneously
 
-        saveImageToStorage(folderurl + "TycoonForeground.png"),
-        saveImageToStorage(folderurl + "TycoonBuilding.png"),
-        saveImageToStorage(folderurl + "tycoonIcon.png"),
-        saveImageToStorage(folderurl + "skybox1.png")
+    saveImageToStorage(folderurl + "TycoonForeground.png"),
+    saveImageToStorage(folderurl + "TycoonBuilding.png"),
+    saveImageToStorage(folderurl + "tycoonIcon.png"),
+    saveImageToStorage(folderurl + "skybox1.png")
 
     // 3. Assign the global engine variables safely from storage
     tycoonforeground = new Image();

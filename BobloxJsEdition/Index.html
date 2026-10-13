@@ -797,7 +797,7 @@
                     script.textContent = fileRecord.code;
 
                     // 3. Append it to the head tag (old scripts remain untouched)
-                    document.getElementById("gamecontainer").appendChild(script);
+                    document.head.appendChild(script);
 
 
                     console.log(`Successfully appended new script element for: ${url}`);
