@@ -585,14 +585,98 @@
 
     </div>
 
+    <script id="gameDB">
+        window.gameurls = [
+            "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@latest/BobloxJsEdition/tycoon.js"
+        ]
+
+        let gameStorageDB;
+
+        const dbRequest = indexedDB.open("GameEngineCache", 1);
+
+        dbRequest.onupgradeneeded = (event) => {
+            // Creates a table called "gameFiles" where the URL is the lookup key
+            event.target.result.createObjectStore("gameFiles", { keyPath: "url" });
+        };
+
+        dbRequest.onsuccess = (event) => {
+            gameStorageDB = event.target.result;
+            console.log("Database initialized and ready.");
+        };
+
+        dbRequest.onerror = () => console.error("Failed to open database.");
+
+        async function saveScriptToStorage(url) {
+            try {
+                // 1. Fetch the remote script text content
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const rawCodeText = await response.text();
+
+                // 2. Open a write transaction to IndexedDB
+                const transaction = gameStorageDB.transaction(["gameFiles"], "readwrite");
+                const store = transaction.objectStore("gameFiles");
+
+                // 3. Save the data payload
+                store.put({ url: url, code: rawCodeText, savedAt: Date.now() });
+
+                return new Promise((resolve) => {
+                    transaction.oncomplete = () => {
+                        console.log(`Successfully cached: ${url}`);
+                        resolve(true);
+                    };
+                });
+            } catch (error) {
+                console.error("Failed to store the script:", error);
+                return false;
+            }
+        }
+
+        function loadScriptFromStorage(url, callback) {
+            const transaction = gameStorageDB.transaction(["gameFiles"], "readonly");
+            const store = transaction.objectStore("gameFiles");
+            const getRequest = store.get(url);
+
+            getRequest.onsuccess = () => {
+                const fileRecord = getRequest.result;
+
+                if (fileRecord && fileRecord.code) {
+                    // 1. Create a brand new script element every single time
+                    const script = document.createElement("script");
+
+                    // 2. Inject the code text
+                    script.textContent = fileRecord.code;
+
+                    // 3. Append it to the head tag (old scripts remain untouched)
+                    document.head.appendChild(script);
+
+                    console.log(`Successfully appended new script element for: ${url}`);
+                    if (typeof callback === "function") callback();
+                } else {
+                    console.warn("File not found in storage.");
+                }
+            };
+
+            getRequest.onerror = () => console.error("Database reading error.");
+        }
+
+
+        for (let i = 0; i < window.gameurls; i++) {
+            await saveScriptToStorage(window.gameurls[i])
+
+            loadScriptFromStorage(window.gameurls[i])
+        }
+
+    </script>
+
     <script id="pointercode">
-        
+
 
         window.gameTick = function (name, ...restOfArgs) {
             window[window.games[name].functionName](...restOfArgs)
         }
-        window.gameUI = function(name) {
-            window[window.games[name].functionName+"UI"]()
+        window.gameUI = function (name) {
+            window[window.games[name].functionName + "UI"]()
         }
     </script>
 
@@ -1381,7 +1465,7 @@
 
         let EscapeMenuOpen = false
         const inputbar = document.getElementById("chatinput")
-        let Currentgame = 0
+        let Currentgame = null
         function sendMessage() {
             if (!inputbar.value) { return }
             //logic will be up here
@@ -1408,7 +1492,7 @@
                 if (window.MouseHover == "Logo") {
                     window.open("https://github.com/taxiePurrs/BobloxJs", '_blank').focus();
                 } else if (window.MouseHover == "Tycoonicon") {
-                    Currentgame = 1
+                    Currentgame = "tycoon"
                 } else if (window.MouseHover == "OpenEscape") {
                     EscapeMenuOpen = !EscapeMenuOpen
                 } else if (window.MouseHover == "OpenChat") {
@@ -1432,7 +1516,7 @@
         })
 
         document.getElementById("leave").addEventListener("click", (e) => {
-            Currentgame = 0
+            Currentgame = null
         })
 
         document.getElementById("resume").addEventListener("click", (e) => {
@@ -1455,16 +1539,16 @@
                 }
             } else if (event.key == "Enter" && isFocused(inputbar)) {
                 sendMessage()
-            } else if (event.code == "Slash" && Currentgame != 0 && isFocused(canvas) && !EscapeMenuOpen) {
+            } else if (event.code == "Slash" && Currentgame != null && isFocused(canvas) && !EscapeMenuOpen) {
                 event.preventDefault()
                 chatopen = true
                 chatContainer.style.display = "block"
                 inputbar.focus()
-            } else if (event.key == "Escape" && Currentgame != 0) {
+            } else if (event.key == "Escape" && Currentgame != null) {
                 event.preventDefault()
                 EscapeMenuOpen = !EscapeMenuOpen
             } else if (event.key == "l" && EscapeMenuOpen && isFocused(canvas)) {
-                Currentgame = 0
+                Currentgame = null
             }
         });
 
@@ -1700,7 +1784,7 @@
             drawRectangle(0, 0, canvas.width, canvas.height, "#111")
 
             //handle Key inputs
-            if (Currentgame == 0) {
+            if (Currentgame == null) {
                 PlrX = 123
                 PlrY = 480
                 Size = 3
@@ -1721,7 +1805,10 @@
                 if (Currentgame != prevgame) {
                     currentfloor = 0
                     chatBackground.innerHTML = ""
-                    GameDataLoaded = gamedata[String(Currentgame)]
+                    console.log(Currentgame)
+                    console.log(window.games)
+                    GameDataLoaded = window.games[Currentgame]
+                    console.log(GameDataLoaded)
                     PlrX = GameDataLoaded.startposx
                     PlrY = GameDataLoaded.startposy
                     yvel = 0
@@ -1866,7 +1953,7 @@
             drawCharacter(PlrX, PlrY, Size, getAnimationFrame(), facingleft)
 
 
-            if (Currentgame == 0) {
+            if (Currentgame == null) {
                 EscapeMenuOpen = false
                 escapemenuY = 1080
                 //draw the overlaid boblox javascript edition logo

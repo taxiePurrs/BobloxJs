@@ -1,3 +1,4 @@
+console.warn("hi")
 window.games["tycoon"] = {
     functionName: "vanillatycoon",
     width: 1920,
