@@ -669,7 +669,7 @@
         }
     </script>
 
-    <script id="gameDB" type="module">
+    <script id="gameDB">
         window.gameurls = [
             "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@latest/BobloxJsEdition/tycoon/tycoon.js"
         ]
@@ -690,52 +690,79 @@
 
         dbRequest.onerror = () => console.error("Failed to open database.");
 
-        window.saveImageToStorage = async function (imageUrl) {
-            try {
-                // 1. Fetch the image file from your asset folder
-                const response = await fetch(imageUrl);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        window.saveImageToStorage = function (imageUrl) {
+    // Skip network request immediately if the browser is completely offline
+    if (navigator.onLine === false) {
+        console.warn("Browser is offline. Skipping asset download.");
+        return Promise.resolve(false);
+    }
 
-                // 2. Convert the response directly into a Binary Blob
-                const imageBlob = await response.blob();
+    // Return the promise pipeline so you can track when the download completes
+    return fetch(imageUrl)
+        .then((response) => {
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return response.blob(); // Pass the raw binary image data to the next .then()
+        })
+        .then((imageBlob) => {
+            // Open a write transaction to IndexedDB
+            const transaction = gameStorageDB.transaction(["gameFiles"], "readwrite");
+            const store = transaction.objectStore("gameFiles");
+            
+            // Store the binary image blob directly into your data structure
+            store.put({ url: imageUrl, code: imageBlob, savedAt: Date.now() });
 
-                // 3. Store the binary image blob directly into IndexedDB
-                const transaction = gameStorageDB.transaction(["gameFiles"], "readwrite");
-                const store = transaction.objectStore("gameFiles");
-                store.put({ url: imageUrl, code: imageBlob, savedAt: Date.now() });
+            // Return a promise that resolves true once written to the hard drive
+            return new Promise((resolve) => {
+                transaction.oncomplete = () => {
+                    console.log(`Asset successfully cached offline: ${imageUrl}`);
+                    resolve(true);
+                };
+            });
+        })
+        .catch((error) => {
+            // Gracefully catch offline failures, CORS blocking, or disk space errors
+            console.error("Failed to store asset:", error);
+            return false;
+        });
+};
 
-                return true;
-            } catch (error) {
-                console.error("Failed to store asset:", error);
-                return false;
+
+        function saveScriptToStorage(url) {
+            // Check if browser is offline to skip network overhead entirely
+            if (navigator.onLine === false) {
+                console.warn("Browser is offline. Skipping update download.");
+                return Promise.resolve(false);
             }
-        }
 
-        async function saveScriptToStorage(url) {
-            try {
-                // 1. Fetch the remote script text content
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const rawCodeText = await response.text();
+            // Return the overall promise chain so you can still track success if you want to
+            return fetch(url)
+                .then((response) => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.text(); // Passes raw text down to the next .then()
+                })
+                .then((rawCodeText) => {
+                    // Open a write transaction to IndexedDB
+                    const transaction = gameStorageDB.transaction(["gameFiles"], "readwrite");
+                    const store = transaction.objectStore("gameFiles");
 
-                // 2. Open a write transaction to IndexedDB
-                const transaction = gameStorageDB.transaction(["gameFiles"], "readwrite");
-                const store = transaction.objectStore("gameFiles");
+                    // Save the data payload
+                    store.put({ url: url, code: rawCodeText, savedAt: Date.now() });
 
-                // 3. Save the data payload
-                store.put({ url: url, code: rawCodeText, savedAt: Date.now() });
-
-                return new Promise((resolve) => {
-                    transaction.oncomplete = () => {
-                        console.log(`Successfully cached: ${url}`);
-                        resolve(true);
-                    };
+                    // Wait for the IndexedDB disk write to finish successfully
+                    return new Promise((resolve) => {
+                        transaction.oncomplete = () => {
+                            console.log(`Successfully cached: ${url}`);
+                            resolve(true);
+                        };
+                    });
+                })
+                .catch((error) => {
+                    // Catches network disconnects, CORS blocks, or database crashes gracefully
+                    console.error("Failed to store the script:", error);
+                    return false;
                 });
-            } catch (error) {
-                console.error("Failed to store the script:", error);
-                return false;
-            }
         }
+
 
         window.loadSavedImage = function (imageUrl) {
             const transaction = gameStorageDB.transaction(["gameFiles"], "readonly");
@@ -771,7 +798,7 @@
 
                     // 3. Append it to the head tag (old scripts remain untouched)
                     document.getElementById("gamecontainer").appendChild(script);
-                    
+
 
                     console.log(`Successfully appended new script element for: ${url}`);
                     if (typeof callback === "function") callback();
@@ -786,7 +813,7 @@
 
         for (let i = 0; i < window.gameurls.length; i++) {
             //console.log(window.gameurls[i] + " stage 1")
-            await saveScriptToStorage(window.gameurls[i])
+            saveScriptToStorage(window.gameurls[i])
             //console.log(window.gameurls[i] + " stage 2")
             loadScriptFromStorage(window.gameurls[i])
             //console.log(window.gameurls[i] + " stage 3")
@@ -2004,7 +2031,7 @@
                         try {
                             ctx.drawImage(item.icon, icox, icoy)
                             mouseHitbox(icox, icoy, 240, 240, key)
-                        } catch(error) {
+                        } catch (error) {
                             continue
                         }
 

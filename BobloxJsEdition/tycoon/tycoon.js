@@ -8,12 +8,11 @@ var classicskybox;
 
 async function loadAndInitializeAssets() {
     // 2. Wait for all downloads to finish saving to storage simultaneously
-    await Promise.all([
+
         saveImageToStorage(folderurl + "TycoonForeground.png"),
         saveImageToStorage(folderurl + "TycoonBuilding.png"),
         saveImageToStorage(folderurl + "tycoonIcon.png"),
         saveImageToStorage(folderurl + "skybox1.png")
-    ]);
 
     // 3. Assign the global engine variables safely from storage
     tycoonforeground = new Image();
