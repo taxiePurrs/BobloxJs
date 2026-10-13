@@ -764,22 +764,26 @@
         }
 
 
-        window.loadSavedImage = function (imageUrl) {
+        function loadSavedImage(url, callback) {
             const transaction = gameStorageDB.transaction(["gameFiles"], "readonly");
             const store = transaction.objectStore("gameFiles");
-            const getRequest = store.get(imageUrl);
+            const getRequest = store.get(url);
 
             getRequest.onsuccess = () => {
                 const fileRecord = getRequest.result;
 
                 if (fileRecord && fileRecord.code) {
-                    // Convert the stored binary blob back into a usable URL source
-                    return URL.createObjectURL(fileRecord.code);
-
-                    console.log("Spritesheet texture mapping linked offline!");
+                    // Convert the binary database blob into a local string URL
+                    const localUrl = URL.createObjectURL(fileRecord.code);
+                    if (typeof callback === "function") callback(localUrl);
+                } else {
+                    console.warn(`Asset missing from offline database cache: ${url}`);
+                    // Fallback to network directly if database is empty
+                    if (typeof callback === "function") callback(url);
                 }
             };
         }
+
 
         function loadScriptFromStorage(url, callback) {
             const transaction = gameStorageDB.transaction(["gameFiles"], "readonly");

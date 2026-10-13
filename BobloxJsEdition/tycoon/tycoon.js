@@ -7,29 +7,38 @@ var TycoonSpritesheet; // Keeping your mixed casing so references don't break
 var tycoonICO;
 var classicskybox;
 
-async function loadAndInitializeAssets() {
-    // 2. Wait for all downloads to finish saving to storage simultaneously
+function loadAndInitializeAssets() {
+    console.log("Syncing tycoon visual assets...");
 
-    saveImageToStorage(folderurl + "TycoonForeground.png"),
-    saveImageToStorage(folderurl + "TycoonBuilding.png"),
-    saveImageToStorage(folderurl + "tycoonIcon.png"),
-    saveImageToStorage(folderurl + "skybox1.png")
+    // 1. Group your asset targets into variables
+    const fgUrl = folderurl + "TycoonForeground.png";
+    const bgUrl = folderurl + "TycoonBuilding.png";
+    const iconUrl = folderurl + "tycoonIcon.png";
+    const skyUrl = folderurl + "skybox1.png";
 
-    // 3. Assign the global engine variables safely from storage
-    tycoonforeground = new Image();
-    tycoonforeground.src = loadSavedImage(folderurl + "TycoonForeground.png");
+    // 2. Fire all downloads simultaneously and wait for them to finish
+    Promise.all([
+        saveImageToStorage(fgUrl),
+        saveImageToStorage(bgUrl),
+        saveImageToStorage(iconUrl),
+        saveImageToStorage(skyUrl)
+    ]).then(() => {
+        console.log("All image assets safely locked into storage database!");
 
-    TycoonSpritesheet = new Image();
-    TycoonSpritesheet.src = loadSavedImage(folderurl + "TycoonBuilding.png");
+        // 3. Assign the global engine variables safely using callbacks
+        tycoonforeground = new Image();
+        loadSavedImage(fgUrl, (src) => tycoonforeground.src = src);
 
-    tycoonICO = new Image();
-    tycoonICO.src = loadSavedImage(folderurl + "tycoonIcon.png");
+        TycoonSpritesheet = new Image();
+        loadSavedImage(bgUrl, (src) => TycoonSpritesheet.src = src);
 
-    classicskybox = new Image();
-    classicskybox.src = loadSavedImage(folderurl + "skybox1.png");
+        tycoonICO = new Image();
+        loadSavedImage(iconUrl, (src) => tycoonICO.src = src);
 
+        classicskybox = new Image();
+        loadSavedImage(skyUrl, (src) => classicskybox.src = src);
+    });
 }
-
 
 // Execute the download and setup block
 loadAndInitializeAssets();
