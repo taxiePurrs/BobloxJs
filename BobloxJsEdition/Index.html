@@ -203,7 +203,7 @@
             height: fit-content;
             background-color: transparent;
             cursor: var(--cursor2);
-            display: none;
+            display: block;
         ">
             <div id="game-console" style="
                 position: absolute;
@@ -285,88 +285,399 @@
     </div>
     </div>
 
-    <script>
-        (function () {
+    <script id="engineapi">
+        window.canvas = document.getElementById("canvas")
+        window.ctx = window.canvas.getContext('2d');
 
-            const screenConsole = document.getElementById('game-console'); //fetch the gui console 
+        window.gameconfig = { //this is the default config
+            HeadCol: "#fe0",        // Head Color, im unsure if it supports full lenght hexadecimal color
+            LArmCol: "#fe0",        // Left Arm Color
+            RArmCol: "#fe0",        // Right Arm Color
+            TorsoCol: "#46f",       // Torso Color
+            LLegCol: "#3c0",        // Left Leg Color
+            RLegCol: "#3c0",        // Right Leg Color
+            Face: "Happy",          // Prefered face
+            ShowFPS: true,          // Show the fps, i should probably merge this into the debug option
+            Debug: true,            // Unused lol
+            Name: "Guest",          // Preffered name
+            BackgroundBlur: true,   // Toggle background blur
+            TycoonProgress: "0",    // Tycoon progress
+            TycoonMoney: 0,         // Tycoon money
+            TycoonPending: 0,       // Pending tycoon money
+            TycoonRebirths: 0,      // Tycoon rebirths
+            Bobux: 0,               // Bobux
+        };
 
-            //define the original outputs for the cosole
-            const originalLog = console.log;
-            const originalWarn = console.warn;
-            const originalError = console.error;
+        for (const key in window.gameconfig) {
+            if (Object.prototype.hasOwnProperty.call(window.gameconfig, key)) {
+                const rawValue = localStorage.getItem(key);
 
+                if (rawValue !== null) {
+                    try {
+                        // Tries to parse booleans ("false"), numbers ("42"), or valid JSON strings ('"Guest"')
+                        window.gameconfig[key] = JSON.parse(rawValue);
 
-            function safePrintToScreen(messageArray, color = "#4CAF50") {
-                try {
-                    if (!screenConsole) return;
-
-                    // Convert arguments to safe strings. 
-                    // If someone passes a circular object or an invalid variable, this prevents a crash.
-                    let parsedMessage = messageArray.map(arg => {
-                        if (typeof arg === 'object' && arg !== null) {
-                            try {
-                                return JSON.stringify(arg); // Convert object to text safely
-                            } catch (e) {
-                                return "[Unprintable Complex Object]";
-                            }
-                        }
-                        return String(arg); // Convert numbers/strings safely
-                    }).join(' ');
-
-                    // Remove formatting flags so they don't break the HTML layout
-                    const cleanMessage = parsedMessage.replace(/%c/g, '');
-
-                    // Safely update the HTML
-                    screenConsole.innerHTML += `<div style="color: ${color}">> ${cleanMessage}</div>`;
-                    screenConsole.scrollTop = screenConsole.scrollHeight; // Keep scrolled to bottom
-                } catch (fatalConsoleError) {
-                    // If the screen logger itself breaks, do absolutely nothing.
-                    // This prevents a logger error from ever crashing your actual game loop.
+                    } catch (error) {
+                        // If parsing fails (like on raw "Guest"), treat it as a normal string
+                        window.gameconfig[key] = rawValue;
+                    }
                 }
             }
+        }
 
-            // 1. Intercept Standard Uncaught Errors (e.g., "variable is not defined")
-            window.addEventListener("error", (event) => {
-                // Format a clean, human-readable error log for the gui console
-                const cleanErrorMsg = `[CRASH AVOIDED] Line ${event.lineno}: ${event.message}`;
+        window.keysdown = new Set();
 
-                if (typeof console.error === 'function') {
-                    console.error(cleanErrorMsg);
+        window.addEventListener("keydown", (event) => window.keysdown.add(event.key));
+        window.addEventListener("keyup", (event) => window.keysdown.delete(event.key));
+
+        window.saveConfigValue = function (key, value) { // Save a config key to localstorage for future loading
+            window.gameconfig[key] = value;
+            localStorage.setItem(key, value);
+        }
+
+        window.clamp = function (value, min, max) { // Mimicks the python Math.clamp function
+            return Math.max(min, Math.min(value, max));
+        }
+
+        window.drawRectangle = function (X, Y, Width, Height, Color) {
+            window.ctx.fillStyle = Color
+            window.ctx.fillRect(X, Y, Width, Height)
+        }
+
+        window.drawRoundedRectangle = function (X, Y, Width, Height, Radius, Color) {
+            window.ctx.fillStyle = Color;
+            window.ctx.beginPath();
+            window.ctx.roundRect(X, Y, Width, Height, Radius);
+            window.ctx.fill();
+        }
+
+        window.drawRotatedRectangle = function (X, Y, Width, Height, Degrees, Color) {
+            window.ctx.fillStyle = Color;
+            window.ctx.save();
+
+            // Move grid origin to the center of where the rectangle should be
+            window.ctx.translate(X + Width / 2, Y + Height / 2);
+
+            // Rotate the grid
+            window.ctx.rotate((Degrees * Math.PI) / 180);
+
+            // Draw the rectangle centered on the new origin
+            window.ctx.fillRect(-Width / 2, -Height / 2, Width, Height);
+
+            window.ctx.restore();
+        }
+
+        window.drawRotatedRoundedRectangle = function (X, Y, Width, Height, Radius, Degrees, Color) {
+            window.ctx.fillStyle = Color;
+            window.ctx.save();
+
+            window.ctx.translate(X + Width / 2, Y + Height / 2);
+            window.ctx.rotate((Degrees * Math.PI) / 180);
+
+            window.ctx.beginPath();
+            window.ctx.roundRect(-Width / 2, -Height / 2, Width, Height, Radius);
+            window.ctx.fill();
+
+            window.ctx.restore();
+        }
+
+        window.drawRotatedImage = function (image, X, Y, Scale, Degrees) {
+            // 1. Skip if the image hasn't fully loaded from the disk yet
+            if (image.naturalWidth === 0) return;
+
+            // 2. Calculate the scaled dimensions
+            const width = image.naturalWidth * Scale;
+            const height = image.naturalHeight * Scale;
+
+            window.ctx.save();
+
+            // 3. Move the grid origin to the center of the image location
+            window.ctx.translate(X + width / 2, Y + height / 2);
+
+            // 4. Rotate the grid (Degrees to Radians)
+            window.ctx.rotate((Degrees * Math.PI) / 180);
+
+            // 5. Draw the image centered on the new origin using negative half-sizes
+            window.ctx.drawImage(image, -width / 2, -height / 2, width, height);
+
+            window.ctx.restore();
+        }
+
+        window.drawSpriteSheet = function (img, cx, cy, sx, sy, w, h) {
+            try {
+                window.ctx.drawImage(img, sx, sy, w, h, cx, cy, w, h);
+            } catch (error) {
+                return
+            }
+        }
+
+        window.drawPolygon = function (FillColor, StrokeColor, StrokeWidth, ...points) { // x and y are individual points, only loop through half!!!
+            if (points.length % 2 === 0) {
+                if (points.length >= 6) {
+                    window.ctx.beginPath();
+                    for (let i = 0; i < points.length; i += 2) {
+                        if (i === 0) {
+                            window.ctx.moveTo(points[i], points[i + 1]);
+                        } else {
+                            window.ctx.lineTo(points[i], points[i + 1]);
+                        }
+                    }
+                    window.ctx.closePath();
+                    if (FillColor !== null) {
+                        window.ctx.fillStyle = FillColor;
+                        window.ctx.fill();
+                    }
+                    if (StrokeWidth !== 0) {
+                        window.ctx.lineWidth = StrokeWidth;
+                        window.ctx.strokeStyle = StrokeColor;
+                        window.ctx.stroke();
+                    }
+                } else {
+                    warn("Less than 6 points proivded!!!")
+                }
+            } else {
+                warn("Odd number of polygon points arguments!!!")
+            }
+        }
+
+        window.drawComplexImage = function (image, X, Y, Scale, Degrees, MirrorX) {
+            if (image.naturalWidth === 0) return;
+
+            const width = image.naturalWidth * Scale;
+            const height = image.naturalHeight * Scale;
+
+            window.ctx.save();
+            window.ctx.translate(X + width / 2, Y + height / 2);
+
+            // 1. Handle mirroring first
+            const flipX = MirrorX ? -1 : 1;
+            window.ctx.scale(flipX, 1);
+
+            // 2. Handle rotation second (Invert degrees if mirrored so it rotates the correct direction)
+            window.ctx.rotate(((Degrees * flipX) * Math.PI) / 180);
+
+            window.ctx.drawImage(image, -width / 2, -height / 2, width, height);
+
+            window.ctx.restore();
+        }
+
+        var mousex = 0, mousey = 0, mouseOnScreen = false, MouseHover = null
+
+        canvas.addEventListener('mousemove', (event) => {
+            const rect = canvas.getBoundingClientRect();
+
+            // Get the 0-1 ratio and clamp it
+            let xRatio = window.clamp((event.clientX - rect.left) / rect.width, 0, 1);
+            let yRatio = window.clamp((event.clientY - rect.top) / rect.height, 0, 1);
+
+            // Assign the calculated pixel integers to your existing variables
+            window.mousex = Math.floor(xRatio * canvas.width);
+            window.mousey = Math.floor(yRatio * canvas.height);
+        });
+
+
+        window.mouseHitbox = function (X, Y, Width, Height, ID) {
+            if (window.mousex > X && window.mousex < X + Width && window.mousey > Y && window.mousey < Y + Height) {
+                window.MouseHover = ID
+            }
+        }
+        window.circularMouseHitbox = function (X, Y, Radius, ID) {
+            if (Math.hypot(X - window.mousex, Y - window.mousey) <= Radius) {
+                window.MouseHover = ID
+            }
+        }
+
+        window.drawText = function (Text, X, Y, Size, Font, Color, Alignment) {
+            window.ctx.fillStyle = Color;
+            window.ctx.font = `${Size}px ${Font}`;
+            window.ctx.textAlign = Alignment || "left"; // Options: "left", "center", "right"
+            window.ctx.textBaseline = "middle";         // Centers text vertically on the Y anchor
+            window.ctx.fillText(Text, X, Y);
+        }
+
+
+
+        window.abbreviateToMoney = function (num) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                notation: 'compact',
+                compactDisplay: 'short',
+                maximumFractionDigits: 1
+            }).format(Math.floor(num));
+        }
+
+        window.checkTextWidth = function (Text, Font, Size) {
+            window.ctx.font = `${Size}px ${Font}`
+            return window.ctx.measureText(Text).width
+        }
+
+        window.calculateTextSize = function (Text, Width, Height, Font, CachedSize = 50) {
+            let size = CachedSize
+            if (window.checkTextWidth(Text, Font, size) > Width || size > Height) {
+                while (window.checkTextWidth(Text, Font, size) > Width || size > Height) {
+                    size -= 1
+                }
+            } else {
+                while (window.checkTextWidth(Text, Font, size) < Width && size <= Height) {
+                    size += 1
+                }
+                size -= 1
+            }
+
+            return size
+        }
+
+        window.drawBoundedText = function (Text, X, Y, Width, Height, Font, Color, Alignment = "center", CachedSize = 40) {
+            const calcsize = calculateTextSize(Text, Width, Height, Font, CachedSize)
+            window.ctx.fillStyle = Color;
+            window.ctx.font = `${calcsize}px ${Font}`;
+            window.ctx.textAlign = Alignment;           // Options: "left", "center", "right"
+            window.ctx.textBaseline = "middle";         // Centers text vertically on the Y anchor
+            window.ctx.fillText(Text, X, Y);
+            return calcsize
+        }
+
+        window.DarkenHex = function (hex) {
+            let cleanHex = hex.replace('#', '');
+            let isShort = cleanHex.length === 3;
+
+            if (isShort) {
+                // Subtract 2 from each shorthand hex digit (approx. 32 in 8-bit)
+                return '#' + Array.from(cleanHex).map(char => {
+                    let val = parseInt(char, 16);
+                    return Math.max(0, val - 2).toString(16);
+                }).join('');
+            } else {
+                // Process standard 6-digit hex
+                let r = parseInt(cleanHex.substring(0, 2), 16);
+                let g = parseInt(cleanHex.substring(2, 4), 16);
+                let b = parseInt(cleanHex.substring(4, 6), 16);
+
+                r = Math.max(0, r - 32).toString(16).padStart(2, '0');
+                g = Math.max(0, g - 32).toString(16).padStart(2, '0');
+                b = Math.max(0, b - 32).toString(16).padStart(2, '0');
+
+                return `#${r}${g}${b}`;
+            }
+        }
+
+        window.readBit = function (bin, bit) {
+            const str = String(bin)                     // stringify the binary number
+            let data = str.charAt(str.length - bit - 1) // get the rightmost number in the binary and shift to left by variable bit
+            return (data === "1")                       // is data equal to 1 
+        }
+
+        window.setBit = function (bin, bit, val) {
+            let str = String(bin)
+            str = "0".repeat(Math.max(bit - str.length + 1, 0)) + str // 0th index, 1 length, add 5, 5th index 6 length
+            return str.split("").with(-(bit + 1), String(val)).join("");
+        }
+    </script>
+
+    <script id="initialize">
+        if (!window.games) {
+            window.games = {}
+        }
+    </script>
+
+    <div id="games">
+
+    </div>
+
+    <script id="pointercode">
+        
+
+        window.gameTick = function (name, ...restOfArgs) {
+            window[window.games[name].functionName](...restOfArgs)
+        }
+        window.gameUI = function(name) {
+            window[window.games[name].functionName+"UI"]()
+        }
+    </script>
+
+    <script>
+            (function () {
+
+                const screenConsole = document.getElementById('game-console'); //fetch the gui console 
+
+                //define the original outputs for the cosole
+                const originalLog = console.log;
+                const originalWarn = console.warn;
+                const originalError = console.error;
+
+
+                function safePrintToScreen(messageArray, color = "#4CAF50") {
+                    try {
+                        if (!screenConsole) return;
+
+                        // Convert arguments to safe strings. 
+                        // If someone passes a circular object or an invalid variable, this prevents a crash.
+                        let parsedMessage = messageArray.map(arg => {
+                            if (typeof arg === 'object' && arg !== null) {
+                                try {
+                                    return JSON.stringify(arg); // Convert object to text safely
+                                } catch (e) {
+                                    return "[Unprintable Complex Object]";
+                                }
+                            }
+                            return String(arg); // Convert numbers/strings safely
+                        }).join(' ');
+
+                        // Remove formatting flags so they don't break the HTML layout
+                        const cleanMessage = parsedMessage.replace(/%c/g, '');
+
+                        // Safely update the HTML
+                        screenConsole.innerHTML += `<div style="color: ${color}">> ${cleanMessage}</div>`;
+                        screenConsole.scrollTop = screenConsole.scrollHeight; // Keep scrolled to bottom
+                    } catch (fatalConsoleError) {
+                        // If the screen logger itself breaks, do absolutely nothing.
+                        // This prevents a logger error from ever crashing your actual game loop.
+                    }
                 }
 
-                // Returning TRUE stops the browser from throwing a fatal crash
-                return true;
-            });
+                // 1. Intercept Standard Uncaught Errors (e.g., "variable is not defined")
+                window.addEventListener("error", (event) => {
+                    // Format a clean, human-readable error log for the gui console
+                    const cleanErrorMsg = `[CRASH AVOIDED] Line ${event.lineno}: ${event.message}`;
 
-            // 2. Intercept Broken Asynchronous Promises (e.g., Network/PeerJS timeouts)
-            window.onunhandledrejection = function (event) {
-                const cleanRejectMsg = `[ASYNC CRASH AVOIDED]: ${event.reason}`;
+                    if (typeof console.error === 'function') {
+                        console.error(cleanErrorMsg);
+                    }
 
-                if (typeof console.error === 'function') {
-                    console.error(cleanRejectMsg);
-                }
+                    // Returning TRUE stops the browser from throwing a fatal crash
+                    return true;
+                });
 
-                // Prevent the default browser console thread crash sequence
-                event.preventDefault();
-            };
+                // 2. Intercept Broken Asynchronous Promises (e.g., Network/PeerJS timeouts)
+                window.onunhandledrejection = function (event) {
+                    const cleanRejectMsg = `[ASYNC CRASH AVOIDED]: ${event.reason}`;
+
+                    if (typeof console.error === 'function') {
+                        console.error(cleanRejectMsg);
+                    }
+
+                    // Prevent the default browser console thread crash sequence
+                    event.preventDefault();
+                };
 
 
-            // Overwrite the console channels with protected wrappers
-            console.log = function (...args) {
-                originalLog.apply(console, args); // Still print to real hidden console
-                safePrintToScreen(args, "#4CAF50");
-            };
+                // Overwrite the console channels with protected wrappers
+                console.log = function (...args) {
+                    originalLog.apply(console, args); // Still print to real hidden console
+                    safePrintToScreen(args, "#4CAF50");
+                };
 
-            console.warn = function (...args) {
-                originalWarn.apply(console, args); // Still warn to real hidden console
-                safePrintToScreen(args, "#FF9800");
-            };
+                console.warn = function (...args) {
+                    originalWarn.apply(console, args); // Still warn to real hidden console
+                    safePrintToScreen(args, "#FF9800");
+                };
 
-            console.error = function (...args) {
-                originalError.apply(console, args); // Guess what this does
-                safePrintToScreen(args, "#FF5252");
-            };
-        })();
+                console.error = function (...args) {
+                    originalError.apply(console, args); // Guess what this does
+                    safePrintToScreen(args, "#FF5252");
+                };
+            })();
 
     </script>
 
@@ -678,7 +989,7 @@
                 remotePlayers[remoteSender].ping = Date.now() - packet.time // ping
                 remotePlayers[remoteSender].lastUpdate = Date.now();        // Heartbeat time for auto unloading
 
-            } else if (packet.type === "CHAT" && package.g == Currentgame) { //check if its a chat packet
+            } else if (packet.type === "CHAT" && packet.g == Currentgame) { //check if its a chat packet
                 DrawMessage(String(JSON.parse(packet.n)) + ": " + String(packet.text)) //print the chat message if its a chat packet
             }
 
@@ -800,81 +1111,17 @@
             }
         };
 
+    </script>
+    <script>
 
         function isFocused(obj) {
-            return document.activeElement === (obj || canvas);
+            return document.activeElement === (obj || window.canvas);
         }
 
         let chatContainer = document.getElementById("chatCountainer")
 
-        let config = { //this is the default config
-            HeadCol: "#fe0",        // Head Color, im unsure if it supports full lenght hexadecimal color
-            LArmCol: "#fe0",        // Left Arm Color
-            RArmCol: "#fe0",        // Right Arm Color
-            TorsoCol: "#46f",       // Torso Color
-            LLegCol: "#3c0",        // Left Leg Color
-            RLegCol: "#3c0",        // Right Leg Color
-            Face: "Happy",          // Prefered face
-            ShowFPS: true,          // Show the fps, i should probably merge this into the debug option
-            Debug: true,            // Unused lol
-            Name: "Guest",          // Preffered name
-            BackgroundBlur: true,   // Toggle background blur
-            TycoonProgress: "0",    // Tycoon progress
-            TycoonMoney: 0,         // Tycoon money
-            TycoonPending: 0,       // Pending tycoon money
-            TycoonRebirths: 0,      // Tycoon rebirths
-            Bobux: 0,               // Bobux
-        };
-
-        for (const key in config) {
-            if (Object.prototype.hasOwnProperty.call(config, key)) {
-                const rawValue = localStorage.getItem(key);
-
-                if (rawValue !== null) {
-                    try {
-                        // Tries to parse booleans ("false"), numbers ("42"), or valid JSON strings ('"Guest"')
-                        config[key] = JSON.parse(rawValue);
-                        
-                    } catch (error) {
-                        // If parsing fails (like on raw "Guest"), treat it as a normal string
-                        config[key] = rawValue;
-                    }
-                }
-            }
-        }
-
-        function saveConfigValue(key, value) { // Save a config key to localstorage for future loading
-            config[key] = value;
-            localStorage.setItem(key, value);
-        }
-
-        function clamp(value, min, max) { // Mimicks the python Math.clamp function
-            return Math.max(min, Math.min(value, max));
-        }
-
-        let mousex = 0, mousey = 0, mouseOnScreen = false, MouseHover = null
-        const canvas = document.getElementById("canvas")
-        const ctx = canvas.getContext('2d');
-
-        canvas.addEventListener('mousemove', (event) => {
-            const rect = canvas.getBoundingClientRect();
-
-            // Get the 0-1 ratio and clamp it
-            let xRatio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-            let yRatio = clamp((event.clientY - rect.top) / rect.height, 0, 1);
-
-            // Assign the calculated pixel integers to your existing variables
-            mousex = Math.floor(xRatio * canvas.width);
-            mousey = Math.floor(yRatio * canvas.height);
-        });
-
         canvas.addEventListener("mouseenter", (event) => { mouseOnScreen = true })
         canvas.addEventListener("mouseleave", (event) => { mouseOnScreen = false })
-
-        const keysdown = new Set();
-
-        window.addEventListener("keydown", (event) => keysdown.add(event.key));
-        window.addEventListener("keyup", (event) => keysdown.delete(event.key));
 
         window.addEventListener("blur", () => keysdown.clear());
 
@@ -900,220 +1147,12 @@
         const root = document.documentElement;
 
         function someconfigsupdate() {
-            root.style.setProperty('--blur', config.BackgroundBlur ? "blur(8px)" : "none")
+            root.style.setProperty('--blur', window.gameconfig.BackgroundBlur ? "blur(8px)" : "none")
         }
 
         someconfigsupdate()
         root.style.setProperty('--cursor1', `url('${loadImagePath("White.png")}'), default`);
         root.style.setProperty('--cursor2', `url('${loadImagePath("Black.png")}'), pointer`); // Wait, see below!
-
-        function drawRectangle(X, Y, Width, Height, Color) {
-            ctx.fillStyle = Color
-            ctx.fillRect(X, Y, Width, Height)
-        }
-
-        function drawRoundedRectangle(X, Y, Width, Height, Radius, Color) {
-            ctx.fillStyle = Color;
-            ctx.beginPath();
-            ctx.roundRect(X, Y, Width, Height, Radius);
-            ctx.fill();
-        }
-
-        function drawRotatedRectangle(X, Y, Width, Height, Degrees, Color) {
-            ctx.fillStyle = Color;
-            ctx.save();
-
-            // Move grid origin to the center of where the rectangle should be
-            ctx.translate(X + Width / 2, Y + Height / 2);
-
-            // Rotate the grid
-            ctx.rotate((Degrees * Math.PI) / 180);
-
-            // Draw the rectangle centered on the new origin
-            ctx.fillRect(-Width / 2, -Height / 2, Width, Height);
-
-            ctx.restore();
-        }
-
-        function drawRotatedRoundedRectangle(X, Y, Width, Height, Radius, Degrees, Color) {
-            ctx.fillStyle = Color;
-            ctx.save();
-
-            ctx.translate(X + Width / 2, Y + Height / 2);
-            ctx.rotate((Degrees * Math.PI) / 180);
-
-            ctx.beginPath();
-            ctx.roundRect(-Width / 2, -Height / 2, Width, Height, Radius);
-            ctx.fill();
-
-            ctx.restore();
-        }
-
-        function drawRotatedImage(image, X, Y, Scale, Degrees) {
-            // 1. Skip if the image hasn't fully loaded from the disk yet
-            if (image.naturalWidth === 0) return;
-
-            // 2. Calculate the scaled dimensions
-            const width = image.naturalWidth * Scale;
-            const height = image.naturalHeight * Scale;
-
-            ctx.save();
-
-            // 3. Move the grid origin to the center of the image location
-            ctx.translate(X + width / 2, Y + height / 2);
-
-            // 4. Rotate the grid (Degrees to Radians)
-            ctx.rotate((Degrees * Math.PI) / 180);
-
-            // 5. Draw the image centered on the new origin using negative half-sizes
-            ctx.drawImage(image, -width / 2, -height / 2, width, height);
-
-            ctx.restore();
-        }
-
-        function drawSpriteSheet(img, cx, cy, sx, sy, w, h) {
-            try {
-                ctx.drawImage(img, sx, sy, w, h, cx, cy, w, h);
-            } catch (error) {
-                return
-            }
-        }
-
-        function drawPolygon(FillColor, StrokeColor, StrokeWidth, ...points) { // x and y are individual points, only loop through half!!!
-            if (points.length % 2 === 0) {
-                if (points.length >= 6) {
-                    ctx.beginPath();
-                    for (let i = 0; i < points.length; i += 2) {
-                        if (i === 0) {
-                            ctx.moveTo(points[i], points[i+1]);
-                        } else {
-                            ctx.lineTo(points[i], points[i+1]);
-                        }
-                    }
-                    ctx.closePath();
-                    if (FillColor !== null) {
-                        ctx.fillStyle = FillColor;
-                        ctx.fill();
-                    }
-                    if (StrokeWidth !== 0) {
-                        ctx.lineWidth = StrokeWidth;
-                        ctx.strokeStyle = StrokeColor;
-                        ctx.stroke();
-                    }
-                } else {
-                    warn("Less than 6 points proivded!!!")
-                }
-            } else {
-                warn("Odd number of polygon points arguments!!!")
-            }
-        }
-
-        function drawComplexImage(image, X, Y, Scale, Degrees, MirrorX) {
-            if (image.naturalWidth === 0) return;
-
-            const width = image.naturalWidth * Scale;
-            const height = image.naturalHeight * Scale;
-
-            ctx.save();
-            ctx.translate(X + width / 2, Y + height / 2);
-
-            // 1. Handle mirroring first
-            const flipX = MirrorX ? -1 : 1;
-            ctx.scale(flipX, 1);
-
-            // 2. Handle rotation second (Invert degrees if mirrored so it rotates the correct direction)
-            ctx.rotate(((Degrees * flipX) * Math.PI) / 180);
-
-            ctx.drawImage(image, -width / 2, -height / 2, width, height);
-
-            ctx.restore();
-        }
-
-        function mouseHitbox(X, Y, Width, Height, ID) {
-            if (mousex > X && mousex < X + Width && mousey > Y && mousey < Y + Height) {
-                MouseHover = ID
-            }
-        }
-        function circularMouseHitbox(X, Y, Radius, ID) {
-            if (Math.hypot(X - mousex, Y - mousey) <= Radius) {
-                MouseHover = ID
-            }
-        }
-
-        function drawText(Text, X, Y, Size, Font, Color, Alignment) {
-            ctx.fillStyle = Color;
-            ctx.font = `${Size}px ${Font}`;
-            ctx.textAlign = Alignment || "left"; // Options: "left", "center", "right"
-            ctx.textBaseline = "middle";         // Centers text vertically on the Y anchor
-            ctx.fillText(Text, X, Y);
-        }
-
-        let cachedCollectorSize = 0
-
-        function abbreviateToMoney(num) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                notation: 'compact',
-                compactDisplay: 'short',
-                maximumFractionDigits: 1
-            }).format(Math.floor(num));
-        }
-
-        function checkTextWidth(Text, Font, Size) {
-            ctx.font = `${Size}px ${Font}`
-            return ctx.measureText(Text).width
-        }
-
-        function calculateTextSize(Text, Width, Height, Font, CachedSize = 50) {
-            let size = CachedSize
-            if (checkTextWidth(Text, Font, size) > Width || size > Height) {
-                while (checkTextWidth(Text, Font, size) > Width || size > Height) {
-                    size -= 1
-                }
-            } else {
-                while (checkTextWidth(Text, Font, size) < Width && size <= Height) {
-                    size += 1
-                }
-                size -= 1
-            }
-
-            return size
-        }
-
-        function drawBoundedText(Text, X, Y, Width, Height, Font, Color, Alignment = "center", CachedSize = 40) {
-            const calcsize = calculateTextSize(Text, Width, Height, Font, CachedSize)
-            ctx.fillStyle = Color;
-            ctx.font = `${calcsize}px ${Font}`;
-            ctx.textAlign = Alignment;           // Options: "left", "center", "right"
-            ctx.textBaseline = "middle";         // Centers text vertically on the Y anchor
-            ctx.fillText(Text, X, Y);
-            return calcsize
-        }
-
-        function DarkenHex(hex) {
-            let cleanHex = hex.replace('#', '');
-            let isShort = cleanHex.length === 3;
-
-            if (isShort) {
-                // Subtract 2 from each shorthand hex digit (approx. 32 in 8-bit)
-                return '#' + Array.from(cleanHex).map(char => {
-                    let val = parseInt(char, 16);
-                    return Math.max(0, val - 2).toString(16);
-                }).join('');
-            } else {
-                // Process standard 6-digit hex
-                let r = parseInt(cleanHex.substring(0, 2), 16);
-                let g = parseInt(cleanHex.substring(2, 4), 16);
-                let b = parseInt(cleanHex.substring(4, 6), 16);
-
-                r = Math.max(0, r - 32).toString(16).padStart(2, '0');
-                g = Math.max(0, g - 32).toString(16).padStart(2, '0');
-                b = Math.max(0, b - 32).toString(16).padStart(2, '0');
-
-                return `#${r}${g}${b}`;
-            }
-        }
 
         let faceSideHappy = new Image()
         loadImage(faceSideHappy, "FaceSideHappy.png")
@@ -1251,7 +1290,7 @@
                 Scale * 20,
                 Scale * 40,
                 Data.LArm.rot * flipX,
-                DarkenHex(Mirror ? config.RArmCol : config.LArmCol)
+                DarkenHex(Mirror ? window.gameconfig.RArmCol : window.gameconfig.LArmCol)
             );
             // Left leg
             drawRotatedRectangle(
@@ -1260,7 +1299,7 @@
                 Scale * 20,
                 Scale * 40,
                 Data.LLeg.rot * flipX,
-                DarkenHex(Mirror ? config.RLegCol : config.LLegCol)
+                DarkenHex(Mirror ? window.gameconfig.RLegCol : window.gameconfig.LLegCol)
             );
 
             // Head
@@ -1271,13 +1310,13 @@
                 Scale * 20,
                 Scale * 5,
                 Data.Head.rot * flipX,
-                config.HeadCol
+                window.gameconfig.HeadCol
             );
 
             //face
             let face = Data.Face
             if (face == "PrefferedSide") {
-                face = config.Face + "Side"
+                face = window.gameconfig.Face + "Side"
             }
 
             const facetexture = faces[face];
@@ -1305,7 +1344,7 @@
                 Scale * 20,
                 Scale * 40,
                 Data.RLeg.rot * flipX,
-                Mirror ? config.LLegCol : config.RLegCol
+                Mirror ? window.gameconfig.LLegCol : window.gameconfig.RLegCol
             );
 
             // Torso
@@ -1315,7 +1354,7 @@
                 Scale * 20,
                 Scale * 40,
                 Data.Torso.rot * flipX,
-                config.TorsoCol
+                window.gameconfig.TorsoCol
             );
 
             // Right arm
@@ -1325,7 +1364,7 @@
                 Scale * 20,
                 Scale * 40,
                 Data.RArm.rot * flipX,
-                Mirror ? config.LArmCol : config.RArmCol
+                Mirror ? window.gameconfig.LArmCol : window.gameconfig.RArmCol
             );
         }
 
@@ -1334,131 +1373,6 @@
 
         let foreground1 = new Image()
         loadImage(foreground1, "TycoonForeground.png")
-
-        let gamedata = {
-            "1": {
-                width: 1920,
-                startposx: 90,
-                startposy: 940,
-                Size: 2.5,
-                Skybox: skybox1,
-                foreground: foreground1,
-                gravity: 1930.44,
-                floors: [
-                    {
-                        xstart: 0,
-                        xend: 1920,
-                        y: 940,
-                        enabled: true,
-                        passable: false,
-                        Ladder: false
-                    },
-                    {
-                        xstart: 600,
-                        xend: 1920,
-                        y: 918,
-                        enabled: false,
-                        passable: false,
-                        Ladder: false
-                    },
-                    {
-                        xstart: 600,
-                        xend: 1746,
-                        y: 596,
-                        enabled: false,
-                        passable: false,
-                        Ladder: false
-                    },
-                    {
-                        xstart: 1896,
-                        xend: 1920,
-                        y: 596,
-                        enabled: false,
-                        passable: false,
-                        Ladder: false
-                    },
-                    {
-                        xstart: 1746,
-                        xend: 1896,
-                        y: 885,
-                        enabled: false,
-                        passable: true,
-                        Ladder: true
-                    },
-                    {
-                        xstart: 1746,
-                        xend: 1896,
-                        y: 839,
-                        enabled: false,
-                        passable: true,
-                        Ladder: true
-                    },
-                    {
-                        xstart: 1746,
-                        xend: 1896,
-                        y: 793,
-                        enabled: false,
-                        passable: true,
-                        Ladder: true
-                    },
-                    {
-                        xstart: 1746,
-                        xend: 1896,
-                        y: 747,
-                        enabled: false,
-                        passable: true,
-                        Ladder: true
-                    },
-                    {
-                        xstart: 1746,
-                        xend: 1896,
-                        y: 701,
-                        enabled: false,
-                        passable: true,
-                        Ladder: true
-                    },
-                    {
-                        xstart: 1746,
-                        xend: 1896,
-                        y: 655,
-                        enabled: false,
-                        passable: true,
-                        Ladder: true
-                    },
-                    {
-                        xstart: 1746,
-                        xend: 1896,
-                        y: 609,
-                        enabled: false,
-                        passable: true,
-                        Ladder: true
-                    }
-                ],
-                ceilings: [
-                    {
-                        xstart: 600,
-                        xend: 1746,
-                        y: 607,
-                        enabled: false
-                    },
-                    {
-                        xstart: 1896,
-                        xend: 1920,
-                        y: 607,
-                        enabled: false
-                    }
-                ],
-                walls: [
-                    {
-                        x: 1908,
-                        ystart: 596,
-                        yend: 918,
-                        width: 12,
-                        enabled: false
-                    },
-                ]
-            }
-        }
 
         let TycoonSpritesheet = new Image()
         loadImage(TycoonSpritesheet, "TycoonBuilding.png")
@@ -1475,10 +1389,10 @@
                 type: "CHAT",
                 g: Currentgame,
                 text: inputbar.value,
-                n: config.Name,
+                n: window.gameconfig.Name,
             });
 
-            DrawMessage(JSON.parse(config.Name) + ": " + inputbar.value)
+            DrawMessage(JSON.parse(window.gameconfig.Name) + ": " + inputbar.value)
 
             //clearing and focusing canvas
             inputbar.value = ""
@@ -1487,32 +1401,32 @@
 
         //click detection
         canvas.addEventListener("click", (event) => {
-            if (MouseHover === null) {
+            if (window.MouseHover === null) {
                 EscapeMenuOpen = false
             }
             if (isFocused(canvas)) {
-                if (MouseHover == "Logo") {
+                if (window.MouseHover == "Logo") {
                     window.open("https://github.com/taxiePurrs/BobloxJs", '_blank').focus();
-                } else if (MouseHover == "Tycoonicon") {
+                } else if (window.MouseHover == "Tycoonicon") {
                     Currentgame = 1
-                } else if (MouseHover == "OpenEscape") {
+                } else if (window.MouseHover == "OpenEscape") {
                     EscapeMenuOpen = !EscapeMenuOpen
-                } else if (MouseHover == "OpenChat") {
+                } else if (window.MouseHover == "OpenChat") {
                     chatopen = !chatopen
-                } else if (MouseHover == "HomeTab") {
+                } else if (window.MouseHover == "HomeTab") {
                     menu = 0
-                } else if (MouseHover == "SettingsTab") {
+                } else if (window.MouseHover == "SettingsTab") {
                     menu = 1
-                } else if (MouseHover == "ToggleBlur") {
-                    config.BackgroundBlur = !config.BackgroundBlur
-                    saveConfigValue("BackgroundBlur", config.BackgroundBlur)
+                } else if (window.MouseHover == "ToggleBlur") {
+                    window.gameconfig.BackgroundBlur = !window.gameconfig.BackgroundBlur
+                    saveConfigValue("BackgroundBlur", window.gameconfig.BackgroundBlur)
                     someconfigsupdate()
-                } else if (MouseHover == "ToggleDebug") {
-                    config.Debug = !config.Debug
-                    saveConfigValue("Debug", config.Debug)
-                } else if (MouseHover == "ToggleFPS") {
-                    config.ShowFPS = !config.ShowFPS
-                    saveConfigValue("ShowFPS", config.ShowFPS)
+                } else if (window.MouseHover == "ToggleDebug") {
+                    window.gameconfig.Debug = !window.gameconfig.Debug
+                    saveConfigValue("Debug", window.gameconfig.Debug)
+                } else if (window.MouseHover == "ToggleFPS") {
+                    window.gameconfig.ShowFPS = !window.gameconfig.ShowFPS
+                    saveConfigValue("ShowFPS", window.gameconfig.ShowFPS)
                 }
             }
         })
@@ -1729,10 +1643,10 @@
 
         //save configs
         window.addEventListener("beforeunload", (event) => {
-            saveConfigValue("Name", config.Name)
-            saveConfigValue("TycoonProgress", config.TycoonProgress)
-            saveConfigValue("TycoonPending", config.TycoonPending)
-            saveConfigValue("TycoonMoney", config.TycoonMoney)
+            saveConfigValue("Name", window.gameconfig.Name)
+            saveConfigValue("TycoonProgress", window.gameconfig.TycoonProgress)
+            saveConfigValue("TycoonPending", window.gameconfig.TycoonPending)
+            saveConfigValue("TycoonMoney", window.gameconfig.TycoonMoney)
             //saveConfigValue("TycoonProgress", "0")
         });
 
@@ -1742,7 +1656,7 @@
         let escapemenu = document.getElementById("escapemenu")
 
         function inRange(number, min, max) {
-            return (number === clamp(number, min, max))
+            return (number === window.clamp(number, min, max))
         }
 
         function ChangeBase(val, startbase, endbase) {
@@ -1750,109 +1664,22 @@
             return decimal.toString(endbase)
         }
 
-        function readBit(bin, bit) {
-            const str = String(bin)                     // stringify the binary number
-            let data = str.charAt(str.length - bit - 1) // get the rightmost number in the binary and shift to left by variable bit
-            return (data === "1")                       // is data equal to 1 
-        }
-
-        function setbit(bin, bit, val) {
-            let str = String(bin)
-            str = "0".repeat(Math.max(bit - str.length + 1, 0)) + str // 0th index, 1 length, add 5, 5th index 6 length
-            return str.split("").with(-(bit + 1), String(val)).join("");
-        }
-
-        const tycoonoffset = 644
-
-        let tycoonbuttons = [
-            {
-                text: "Foundation",
-                price: 0,
-                displayprice: "Free",
-                bit: 0,
-                x: 611,
-                y: 918
-            },
-            {
-                text: "Conveyor",
-                price: 0,
-                displayprice: "Free",
-                bit: 0,
-                x: 1327,
-                y: 896
-            },
-            {
-                text: "Collector",
-                price: 0,
-                displayprice: "Free",
-                bit: 0,
-                x: 1526,
-                y: 896
-            },
-            {
-                text: "Dropper",
-                price: 0,
-                displayprice: "Free",
-                bit: 0,
-                x: 727,
-                y: 896
-            },
-            {
-                text: "Dropper",
-                price: 25,
-                displayprice: "$25",
-                bit: 0,
-                x: 917,
-                y: 896
-            },
-            {
-                text: "Dropper",
-                price: 100,
-                displayprice: "$100",
-                bit: 0,
-                x: 1107,
-                y: 896
-            },
-            {
-                text: "Upgrader",
-                price: 250,
-                displayprice: "$250",
-                bit: 0,
-                x: 1297,
-                y: 896
-            },
-            {
-                text: "Floor 2",
-                price: 500,
-                displayprice: "$500",
-                bit: 0,
-                x: 1761,
-                y: 896
-            }
-        ]
-
-        let tycoonblocks = []
-
-        function makeTycoonButton(id, bin) {
-            const data = tycoonbuttons[id]
-            drawRoundedRectangle(data.x, data.y, 120, 30, 5, "#e00")
-            drawText(data.text, data.x + 60, data.y - 80, 30, "Arial", "#fff", "center")
-            drawText(data.displayprice, data.x + 60, data.y - 50, 30, "Arial", "#fff", "center")
-
-            if (!readBit(bin, id) && config.TycoonMoney >= data.price && inRange(PlrX, data.x, data.x+120) && inRange(PlrY, data.y, data.y + 30)) {
-                config.TycoonMoney -= data.price
-                return setbit(bin, id, "1")
-            }
-            return setbit(bin, id, "0")
-        }
-
-        let lastTycoonDrop = 0
-
         /*
         ###########
         #GAME LOOP#
         ###########
         */
+
+        function ceilingcheck(prevy, newy) {
+            let ceil = 0
+            for (let i in GameDataLoaded.ceilings) {
+                const data = GameDataLoaded.ceilings[i]
+                if (data.enabled && inRange(PlrX, data.xstart - 10 * Size + 1, data.xend + 10 * Size - 1) && newy - 100 * Size < data.y && prevy - 100 * Size > data.y) {
+                    return data.y
+                }
+            }
+            return 0
+        }
 
         function gameLoop(currentTime) {
             let dt = (currentTime - lastTime) / 1000;
@@ -1860,16 +1687,16 @@
             lastTime = currentTime;
 
             //set reset hovering id
-            MouseHover = null
+            window.MouseHover = null
             let leftrightbias = 0
 
             animationClock = Math.max(animationClock - dt * ((characterState == "Walking") ? (speed / 50) : 1), 0)
 
             escapemenuY += dt * 4000 * (EscapeMenuOpen ? -1 : 1)
-            escapemenuY = clamp(escapemenuY, 120, 1080)
+            escapemenuY = window.clamp(escapemenuY, 120, 1080)
 
             //clear the canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            window.ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawRectangle(0, 0, canvas.width, canvas.height, "#111")
 
             //handle Key inputs
@@ -1904,82 +1731,32 @@
 
                 prevY = PlrY
                 PlrY += yvel * dt
-                for (let i in GameDataLoaded.ceilings) {
-                    const data = GameDataLoaded.ceilings[i]
-                    if (data.enabled && inRange(PlrX, data.xstart - 10*Size, data.xend + 10*Size) && PlrY-100*Size < data.y && prevY-100*Size > data.y) {
-                        yvel *= -0.5
-                        PlrY = data.y+100*Size
-                    }
-                }
-
-                ctx.drawImage(GameDataLoaded.Skybox, 0, 0)
-                const prevX = PlrX+Scrollx
-                let movex = clamp(leftrightbias, -1, 1) * dt * speed * Size
-                const newx = PlrX+movex+Scrollx
-
-                for (let i in GameDataLoaded.walls) {
-                    const data = GameDataLoaded.walls[i]
-                    if (data.enabled && inRange(PlrY, data.ystart - 90*Size, data.yend + 55*Size)) {
-                        if (newx+10*Size > data.x - data.width && prevX+10*Size < data.x - data.width) {
-                            movex = newx - data.x-data.width
-                        } else if (newx*Size < data.x + data.width && prevX*Size > data.x + data.width) {
-                            movex = newx - data.x+data.width+10*Size
-                        }
-                    }
+                const ceil = ceilingcheck(prevY, PlrY)
+                if (ceil != 0) {
+                    yvel *= -0.5
+                    PlrY = ceil + 100 * Size
                 }
 
                 // get the current floor
                 for (let i in GameDataLoaded.floors) {
-                    if (i !== currentfloor && GameDataLoaded.floors[i].enabled) {
+                    if (!GameDataLoaded.floors[i].enabled) {
+                        continue;
+                    }
+                    const passcheck = (keysdown.has("s") || keysdown.has("ArrowDown"))
+                    if (i !== currentfloor) {
                         const data = GameDataLoaded.floors[i]
                         const data2 = GameDataLoaded.floors[currentfloor]
 
-                        if ((!(data.passable && (keysdown.has("s") || keysdown.has("ArrowDown")))) && ((data.y < data2.y) || !inRange(PlrX, data2.xstart, data2.xend)) && PlrY - 10*Size < data.y && inRange(PlrX, data.xstart, data.xend)) {
-                            currentfloor = i
+                        if ((!(data.passable && passcheck)) && ((data.y < data2.y) || !inRange(PlrX, data2.xstart - 10 * Size + 1, data2.xend + 10 * Size - 1)) && PlrY - 10 * Size < data.y && inRange(PlrX, data.xstart - 10 * Size + 1, data.xend + 10 * Size - 1)) {
+                            currentfloor = (ceilingcheck(prevY, data.y) == 0) ? i : currentfloor
                         }
                     } else {
-                        if (GameDataLoaded.floors[currentfloor].passable && (keysdown.has("s") || keysdown.has("ArrowDown"))) {
+                        if (GameDataLoaded.floors[currentfloor].passable && passcheck) {
                             currentfloor = 0
                         }
                     }
                 }
 
-                if (PlrY >= GameDataLoaded.floors[currentfloor].y) {
-                    if (movex == 0) {
-                        characterState = "Idle"
-                        animframe = 0
-                    } else {
-                        if (characterState != "Walking") {
-                            animframe = 0
-                            animationClock = WalkFrameOrder.length / walkanimspeed
-                        }
-                        characterState = "Walking"
-                        if (animationClock == 0) {
-                            animationClock = WalkFrameOrder.length / walkanimspeed
-                        }
-                        animframe = WalkFrameOrder[WalkFrameOrder.length - 1 - clamp(Math.floor(animationClock * walkanimspeed), 0, WalkFrameOrder.length - 1)]
-                    }
-                }
-                if (GameDataLoaded.width - 1920 - Scrollx <= 0 && leftrightbias > 0) {
-                    PlrX += movex
-                }
-                if (Scrollx <= 0 && leftrightbias < 0) {
-                    PlrX += movex
-                }
-                if (PlrX < 10 * Size) {
-                    PlrX = 10 * Size
-                    if (PlrY >= GameDataLoaded.floors[currentfloor].y || characterState == "Walking") {
-                        characterState = "Idle",
-                            animframe = 0
-                    }
-                }
-                if (PlrX > 1920 - 10 * Size) {
-                    PlrX = 1920 - 10 * Size
-                    if (PlrY >= GameDataLoaded.floors[currentfloor].y || characterState == "Walking") {
-                        characterState = "Idle",
-                            animframe = 0
-                    }
-                }
                 if (PlrY >= GameDataLoaded.floors[currentfloor].y && ((!GameDataLoaded.floors[currentfloor].Ladder) || (GameDataLoaded.floors[currentfloor].Ladder && yvel >= 0))) {
                     yvel = 0
                     PlrY = GameDataLoaded.floors[currentfloor].y
@@ -2002,127 +1779,70 @@
                     yvel += GameDataLoaded.gravity * Size * dt
                 }
 
+                window.ctx.drawImage(GameDataLoaded.Skybox, 0, 0)
+                const prevX = PlrX + Scrollx
+                let movex = window.clamp(leftrightbias, -1, 1) * dt * speed * Size
+                let disttowall = movex
+
+                for (let i in GameDataLoaded.walls) {
+                    const data = GameDataLoaded.walls[i]
+                    if (data.enabled && inRange(PlrY - 10 * Size, data.ystart /* - 90*Size*/, data.yend + 90 * Size - 1)) {
+                        if (prevX <= data.x && movex >= 0) {
+                            //console.log(data.x - data.width - prevX - 10*Size)
+                            disttowall = Math.min(disttowall, data.x - data.width - prevX - 10 * Size)
+                        } else if (prevX > data.x && movex < 0) {
+                            //console.log(data.x + data.width - prevX + 10*Size)
+                            disttowall = Math.max(disttowall, data.x + data.width - prevX + 10 * Size)
+                        }
+                    }
+                }
+                movex = disttowall
+
+                if (GameDataLoaded.width - 1920 - Scrollx <= 0 && leftrightbias > 0) {
+                    PlrX += movex
+                }
+                if (Scrollx <= 0 && leftrightbias < 0) {
+                    PlrX += movex
+                }
+                if (PlrX < 10 * Size) {
+                    PlrX = 10 * Size
+                    if (PlrY >= GameDataLoaded.floors[currentfloor].y && yvel == 0 || characterState == "Walking") {
+                        characterState = "Idle",
+                            animframe = 0
+                    }
+                }
+                if (PlrX > 1920 - 10 * Size) {
+                    PlrX = 1920 - 10 * Size
+                    if (PlrY >= GameDataLoaded.floors[currentfloor].y && yvel == 0 || characterState == "Walking") {
+                        characterState = "Idle",
+                            animframe = 0
+                    }
+                }
+
+                if (PlrY >= GameDataLoaded.floors[currentfloor].y && yvel == 0) {
+                    if (movex == 0) {
+                        characterState = "Idle"
+                        animframe = 0
+                    } else {
+                        if (characterState != "Walking") {
+                            animframe = 0
+                            animationClock = WalkFrameOrder.length / walkanimspeed
+                        }
+                        characterState = "Walking"
+                        if (animationClock == 0) {
+                            animationClock = WalkFrameOrder.length / walkanimspeed
+                        }
+                        animframe = WalkFrameOrder[WalkFrameOrder.length - 1 - window.clamp(Math.floor(animationClock * walkanimspeed), 0, WalkFrameOrder.length - 1)]
+                    }
+                }
+
                 /*
                 #############
                 #TYCOON CODE#
                 #############
                 */
 
-                if (Currentgame === 1) {
-                    let tycoondata = ChangeBase(config.TycoonProgress, 16, 2)
-                    GameDataLoaded.floors[1].enabled = readBit(tycoondata, 0)
-
-                    const seventhbit = readBit(tycoondata, 7)
-                    GameDataLoaded.ceilings[0].enabled = seventhbit
-                    GameDataLoaded.ceilings[1].enabled = seventhbit
-                    GameDataLoaded.walls[0].enabled = seventhbit
-                    for (let i = 2; i < GameDataLoaded.floors.length; i++) {
-                        GameDataLoaded.floors[i].enabled = seventhbit
-                    }
-
-                    if (seventhbit) {
-                        drawSpriteSheet(TycoonSpritesheet, 600, 596, 0, 322, 1320, 344) //floor
-                    } else {
-                        drawSpriteSheet(TycoonSpritesheet, 600, 918, 0, 644, 1320, 22) //floor
-                    }
-
-                    if (readBit(tycoondata, 0)) {
-                        if (readBit(tycoondata, 1)) {
-                            if (dt < 250 && currentTime - lastTycoonDrop >= 1000 && readBit(tycoondata, 2)) {
-                                lastTycoonDrop = currentTime 
-                            }
-
-                            if (readBit(tycoondata, 3)) {
-                                drawSpriteSheet(TycoonSpritesheet, 737, 702, 0, 106 + tycoonoffset, 100, 216) // dropper 1
-                                if (lastTycoonDrop == currentTime) {
-                                    tycoonblocks.push({x: 767, y: 732, value: 1, upgraded: false, floor: 1})
-                                }
-                            }
-                            if (readBit(tycoondata, 4)) {
-                                drawSpriteSheet(TycoonSpritesheet, 927, 702, 0, 106 + tycoonoffset, 100, 216) // dropper 2
-                                if (lastTycoonDrop == currentTime) {
-                                    tycoonblocks.push({x: 957, y: 732, value: 2, upgraded: false, floor: 1})
-                                }
-                            }
-                            if (readBit(tycoondata, 5)) {
-                                drawSpriteSheet(TycoonSpritesheet, 1117, 702, 0, 106 + tycoonoffset, 100, 216) // dropper 3
-                                if (lastTycoonDrop == currentTime) {
-                                    tycoonblocks.push({x: 1147, y: 732, value: 5, upgraded: false, floor: 1})
-                                }
-                            }
-
-                            if (readBit(tycoondata, 2)) {
-                                
-                                for (let i = 0; i < tycoonblocks.length; i++) {
-                                    let data = tycoonblocks[i]
-                                    if (data.y < 782 && data.floor == 1) {
-                                        data.y += dt*400
-                                        if (data.y > 782 && data.floor == 1) {
-                                            data.y = 782
-                                        } 
-                                        tycoonblocks[i] = data
-                                        drawText(abbreviateToMoney(data.value), data.x + 20, data.y - 20, 40, "Arial", "#0d0", "center")
-                                        drawRectangle(data.x, data.y, 40, 40, "#e00")
-                                    } else {
-                                        data.x += dt*285
-                                        tycoonblocks[i] = data
-                                        if (data.x > 1482) {
-                                            config.TycoonPending += data.value
-                                            tycoonblocks.splice(i, 1)
-                                            i--
-                                        } else {
-                                            if ((data.floor == 1 && readBit(tycoondata, 6) && data.x > 1307 && !data.upgraded)) {
-                                                data.upgraded = true
-                                                data.value *= 1.5
-                                            }
-                                            drawText(abbreviateToMoney(data.value), data.x + 20, data.y - 20, 40, "Arial", "#0d0", "center")
-                                            drawRectangle(data.x, data.y, 40, 40, "#e00")
-                                        }
-                                    }
-                                }
-                            }                            
-
-                            drawSpriteSheet(TycoonSpritesheet, 692, 792, 100, 196 + tycoonoffset, 952, 126) // conveyor
-
-
-                            if (readBit(tycoondata, 3)) {
-                                if (!seventhbit) {
-                                    tycoondata = makeTycoonButton(7, tycoondata)
-                                }
-                                if (readBit(tycoondata, 4)) {
-                                    if (readBit(tycoondata, 5)) {
-                                        if (readBit(tycoondata, 6)) {
-                                            drawSpriteSheet(TycoonSpritesheet, 1307, 702, 1320, 106 + tycoonoffset, 100, 216) // Upgrader 1
-                                        } else {
-                                            tycoondata = makeTycoonButton(6, tycoondata)
-                                        }
-                                    } else {
-                                        tycoondata = makeTycoonButton(5, tycoondata)
-                                    }
-                                } else {
-                                    tycoondata = makeTycoonButton(4, tycoondata)
-                                }
-                            } else {
-                                tycoondata = makeTycoonButton(3, tycoondata)
-                            }
-                        } else {
-                            tycoondata = makeTycoonButton(1, tycoondata)
-                        }
-                        if (readBit(tycoondata, 2)) {
-                            drawSpriteSheet(TycoonSpritesheet, 1452, 679, 1052, 83 + tycoonoffset, 268, 239) // collector
-                            const onbtn = (inRange(PlrY, 896, 926) && inRange(PlrX, 1464, 1708));
-                            config.TycoonMoney += onbtn ? config.TycoonPending : 0;
-                            config.TycoonPending *= onbtn ? 0 : 1;
-                            drawRectangle(1464, 885, 244, 21, (onbtn || config.TycoonPending == 0) ? "#d00" : "#0d0")
-                            cachedCollectorSize = drawBoundedText(abbreviateToMoney(config.TycoonPending), 1586, 787, 196, 68, "Arial", "#ff0", "center", cachedCollectorSize) // text
-                        } else {
-                            tycoondata = makeTycoonButton(2, tycoondata)
-                        }
-                    } else {
-                        tycoondata = makeTycoonButton(0, tycoondata)
-                    }
-                    config.TycoonProgress = ChangeBase(tycoondata, 2, 16)
-                }
+                window.gameTick(Currentgame, GameDataLoaded, dt, currentTime)
             }
             prevgame = Currentgame
 
@@ -2150,39 +1870,39 @@
                 EscapeMenuOpen = false
                 escapemenuY = 1080
                 //draw the overlaid boblox javascript edition logo
-                drawSpriteSheet(UISheet, 10, 10, 60, 0, 315, 90)
+                window.drawSpriteSheet(UISheet, 10, 10, 60, 0, 315, 90)
                 mouseHitbox(10, 10, 315, 90, "Logo") //clickbox redirects to github repo
 
-                drawSpriteSheet(UISheet, 335, 40, 380, 30, 60, 60)
+                window.drawSpriteSheet(UISheet, 335, 40, 380, 30, 60, 60)
                 mouseHitbox(335, 40, 60, 60, "HomeTab")
 
-                drawSpriteSheet(UISheet, 395, 40, 380, 90, 60, 60)
+                window.drawSpriteSheet(UISheet, 395, 40, 380, 90, 60, 60)
                 mouseHitbox(395, 40, 60, 60, "SettingsTab")
 
                 if (menu == 0) {
                     //draw games on home menu
-                    drawSpriteSheet(UISheet, 235, 120, 0, 90, 240, 240)
-                    //ctx.drawImage(tycoonico, 235, 120, 240, 240)
+                    window.drawSpriteSheet(UISheet, 235, 120, 0, 90, 240, 240)
+                    //window.ctx.drawImage(tycoonico, 235, 120, 240, 240)
                     mouseHitbox(235, 120, 240, 240, "Tycoonicon")
                 } else if (menu == 1) {
                     // toggle background blur
-                    drawSpriteSheet(UISheet, 235, 120, 0, config.BackgroundBlur ? 60 : 30, 60, 30)
+                    window.drawSpriteSheet(UISheet, 235, 120, 0, window.gameconfig.BackgroundBlur ? 60 : 30, 60, 30)
                     mouseHitbox(235, 120, 60, 30, "ToggleBlur")
                     drawText("Enable Ui blur", 295, 135, 30, "Arial", "#fff")
 
                     // toggle debug settings
-                    drawSpriteSheet(UISheet, 235, 160, 0, config.Debug ? 60 : 30, 60, 30)
+                    window.drawSpriteSheet(UISheet, 235, 160, 0, window.gameconfig.Debug ? 60 : 30, 60, 30)
                     mouseHitbox(235, 160, 60, 30, "ToggleDebug")
                     drawText("Debug options", 295, 175, 30, "Arial", "#fff")
 
-                    if (config.Debug) { // check if debug options are enabled
+                    if (window.gameconfig.Debug) { // check if debug options are enabled
                         //draw fps toggle
-                        drawSpriteSheet(UISheet, 265, 200, 0, config.ShowFPS ? 60 : 30, 60, 30)
+                        window.drawSpriteSheet(UISheet, 265, 200, 0, window.gameconfig.ShowFPS ? 60 : 30, 60, 30)
                         mouseHitbox(265, 200, 60, 30, "ToggleFPS")
                         drawText("Show FPS", 325, 215, 30, "Arial", "#fff")
                     }
 
-                    const offset = config.debug ? 40 : 0
+                    const offset = window.gameconfig.debug ? 40 : 0
 
                 }
 
@@ -2194,7 +1914,7 @@
                 }
             } else {
                 if (GameDataLoaded) {
-                    ctx.drawImage(GameDataLoaded.foreground, 0, 0)
+                    window.ctx.drawImage(GameDataLoaded.foreground, 0, 0)
                 }
 
                 /*
@@ -2202,18 +1922,7 @@
                 #INGAME UI#
                 ###########
                 */
-                if (Currentgame == 1) {
-                    // draw the tycoon money hud
-                    const abreviateMoney = abbreviateToMoney(config.TycoonMoney)
-                    const moneywidth = checkTextWidth(abreviateMoney, "Arial", 80)
-                    drawPolygon("#0009", "#000", 0,
-                        880 - moneywidth/2, 1080,
-                        960 - moneywidth/2, 1000,
-                        960 + moneywidth/2, 1000,
-                        1040 + moneywidth/2, 1080
-                    )
-                    drawText(abreviateMoney, 960, 1045, 80, "Arial", "#0d0", "center")
-                }
+                gameUI(Currentgame)
 
                 if ((chatopen && !EscapeMenuOpen ? "block" : "none" /* gets the target display type */) !== chatmenudisplay) {
                     chatContainer.style.display = chatmenudisplay = chatmenudisplay === "none" ? "block" : "none"; // update if outdated
@@ -2221,14 +1930,14 @@
 
                 //draw the Boblox escape menu button
                 circularMouseHitbox(35, 35, 25, "OpenEscape")
-                drawRoundedRectangle(10, 10, 50, 50, 25, (MouseHover == "OpenEscape" && !EscapeMenuOpen) ? "#9999" : "#0009")
-                drawSpriteSheet(UISheet, 20, 20, 30, 0, 30, 30)
+                drawRoundedRectangle(10, 10, 50, 50, 25, (window.MouseHover == "OpenEscape" && !EscapeMenuOpen) ? "#9999" : "#0009")
+                window.drawSpriteSheet(UISheet, 20, 20, 30, 0, 30, 30)
 
 
                 //draw the chat button
                 circularMouseHitbox(95, 35, 25, "OpenChat")
-                drawRoundedRectangle(70, 10, 50, 50, 25, (MouseHover == "OpenChat" && !EscapeMenuOpen) ? "#9999" : "#0009")
-                drawSpriteSheet(UISheet, 80, 20, chatopen ? 410 : 380, 0, 30, 30)
+                drawRoundedRectangle(70, 10, 50, 50, 25, (window.MouseHover == "OpenChat" && !EscapeMenuOpen) ? "#9999" : "#0009")
+                window.drawSpriteSheet(UISheet, 80, 20, chatopen ? 410 : 380, 0, 30, 30)
 
                 //draw the escape menu
                 if ((escapemenuY < 1080 ? "block" : "none" /* gets the target display type */) !== escapemenudisplay) {
@@ -2236,7 +1945,7 @@
                 }
                 if (escapemenuY < 1080) {
                     if (EscapeMenuOpen) {
-                        MouseHover = null
+                        window.MouseHover = null
                         mouseHitbox((canvas.width - 1280) / 2, escapemenuY, 1280, 840, "EscapeBackground")
                     }
                     escapemenu.style.top = (escapemenuY / canvas.height * 100) + "%"
@@ -2248,9 +1957,9 @@
 
 
             //draw the cursor
-            canvas.style.cursor = !(MouseHover == null || MouseHover == "EscapeBackground") ? "var(--cursor2)" : "var(--cursor1)"
+            canvas.style.cursor = !(window.MouseHover == null || window.MouseHover == "EscapeBackground") ? "var(--cursor2)" : "var(--cursor1)"
 
-            if (config.ShowFPS && config.Debug) {
+            if (window.gameconfig.ShowFPS && window.gameconfig.Debug) {
                 drawText(
                     Math.round(1 / dt) + " FPS",
                     0,
@@ -2280,7 +1989,7 @@
                     sx: Scrollx,            // Camera scroll
                     s: Size,                // Scale of the avatar
                     m: facingleft,          // Avatar should be mirrored on render
-                    n: config.Name,         // Preffered name
+                    n: window.gameconfig.Name,         // Preffered name
                     time: Date.now(),       // current time, used for ping calculation
                     state: safeFramePacket  // Animation data
                 });
