@@ -203,7 +203,7 @@
             height: fit-content;
             background-color: transparent;
             cursor: var(--cursor2);
-            display: block;
+            display: none;
         ">
             <div id="game-console" style="
                 position: absolute;
@@ -1909,10 +1909,10 @@
                 if (Currentgame != prevgame) {
                     currentfloor = 0
                     chatBackground.innerHTML = ""
-                    console.log(Currentgame)
-                    console.log(window.games)
+                    //console.log(Currentgame)
+                    //console.log(window.games)
                     GameDataLoaded = window.games[Currentgame]
-                    console.log(GameDataLoaded)
+                    //console.log(GameDataLoaded)
                     PlrX = GameDataLoaded.startposx
                     PlrY = GameDataLoaded.startposy
                     yvel = 0
