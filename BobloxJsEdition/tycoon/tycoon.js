@@ -1,21 +1,40 @@
-const folderurl = "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@latest/BobloxJsEdition/tycoon/"
+const folderurl = "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@latest/BobloxJsEdition/tycoon/";
 
-await saveImageToStorage(folderurl+"TycoonForeground.png")
-await saveImageToStorage(folderurl+"TycoonBuilding.png")
-await saveImageToStorage(folderurl+"tycoonIcon.png")
-await saveImageToStorage(folderurl+"skybox1.png")
+// 1. Declare variables globally so the engine can always see them
+var tycoonforeground;
+var TycoonSpritesheet; // Keeping your mixed casing so references don't break
+var tycoonICO;
+var classicskybox;
 
-var tycoonforeground = new Image()
-tycoonforeground.src = loadSavedImage(folderurl+"TycoonForeground.png")
+async function loadAndInitializeAssets() {
+    // 2. Wait for all downloads to finish saving to storage simultaneously
+    await Promise.all([
+        saveImageToStorage(folderurl + "TycoonForeground.png"),
+        saveImageToStorage(folderurl + "TycoonBuilding.png"),
+        saveImageToStorage(folderurl + "tycoonIcon.png"),
+        saveImageToStorage(folderurl + "skybox1.png")
+    ]);
 
-let TycoonSpritesheet = new Image()
-TycoonSpritesheet.src = loadSavedImage(folderurl+"TycoonBuilding.png")
+    // 3. Assign the global engine variables safely from storage
+    tycoonforeground = new Image();
+    tycoonforeground.src = loadSavedImage(folderurl + "TycoonForeground.png");
 
-var tycoonICO = new Image()
-tycoonICO.src = loadSavedImage(folderurl+"tycoonIcon.png")
+    TycoonSpritesheet = new Image();
+    TycoonSpritesheet.src = loadSavedImage(folderurl + "TycoonBuilding.png");
 
-var classicskybox = new Image()
-classicskybox.src = loadSavedImage(folderurl+"skybox1.png")
+    tycoonICO = new Image();
+    tycoonICO.src = loadSavedImage(folderurl + "tycoonIcon.png");
+
+    classicskybox = new Image();
+    classicskybox.src = loadSavedImage(folderurl + "skybox1.png");
+    
+    // 4. (Optional) Trigger your engine's start/render loop here now that assets are ready
+    // engine.start();
+}
+
+// Execute the download and setup block
+loadAndInitializeAssets();
+
 
 window.games["tycoon"] = {
     functionName: "vanillatycoon",
