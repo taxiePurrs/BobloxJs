@@ -371,7 +371,7 @@
     </script>
 
 
-    <script id="engineapi" type="module">
+    <script id="engineapi">
         window.canvas = document.getElementById("canvas")
         window.ctx = window.canvas.getContext('2d');
 
@@ -393,6 +393,8 @@
             TycoonRebirths: 0,      // Tycoon rebirths
             Bobux: 0,               // Bobux
         };
+
+        console.warn(gameconfig)
 
         for (const key in window.gameconfig) {
             if (Object.prototype.hasOwnProperty.call(window.gameconfig, key)) {
@@ -659,46 +661,6 @@
             str = "0".repeat(Math.max(bit - str.length + 1, 0)) + str // 0th index, 1 length, add 5, 5th index 6 length
             return str.split("").with(-(bit + 1), String(val)).join("");
         }
-
-        window.saveImageToStorage = async function (imageUrl) {
-            try {
-                // 1. Fetch the image file from your asset folder
-                const response = await fetch(imageUrl);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-                // 2. Convert the response directly into a Binary Blob
-                const imageBlob = await response.blob();
-
-                // 3. Store the binary image blob directly into IndexedDB
-                const transaction = gameStorageDB.transaction(["gameFiles"], "readwrite");
-                const store = transaction.objectStore("gameFiles");
-                store.put({ url: imageUrl, code: imageBlob, savedAt: Date.now() });
-
-                return true;
-            } catch (error) {
-                console.error("Failed to store asset:", error);
-                return false;
-            }
-        }
-
-        window.loadSavedImage = function (imageUrl) {
-            const transaction = gameStorageDB.transaction(["gameFiles"], "readonly");
-            const store = transaction.objectStore("gameFiles");
-            const getRequest = store.get(imageUrl);
-
-            getRequest.onsuccess = () => {
-                const fileRecord = getRequest.result;
-
-                if (fileRecord && fileRecord.code) {
-                    // Convert the stored binary blob back into a usable URL source
-                    return URL.createObjectURL(fileRecord.code);
-
-                    console.log("Spritesheet texture mapping linked offline!");
-                }
-            };
-        }
-
-
     </script>
 
     <script id="initialize">
@@ -728,6 +690,27 @@
 
         dbRequest.onerror = () => console.error("Failed to open database.");
 
+        window.saveImageToStorage = async function (imageUrl) {
+            try {
+                // 1. Fetch the image file from your asset folder
+                const response = await fetch(imageUrl);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                // 2. Convert the response directly into a Binary Blob
+                const imageBlob = await response.blob();
+
+                // 3. Store the binary image blob directly into IndexedDB
+                const transaction = gameStorageDB.transaction(["gameFiles"], "readwrite");
+                const store = transaction.objectStore("gameFiles");
+                store.put({ url: imageUrl, code: imageBlob, savedAt: Date.now() });
+
+                return true;
+            } catch (error) {
+                console.error("Failed to store asset:", error);
+                return false;
+            }
+        }
+
         async function saveScriptToStorage(url) {
             try {
                 // 1. Fetch the remote script text content
@@ -754,6 +737,23 @@
             }
         }
 
+        window.loadSavedImage = function (imageUrl) {
+            const transaction = gameStorageDB.transaction(["gameFiles"], "readonly");
+            const store = transaction.objectStore("gameFiles");
+            const getRequest = store.get(imageUrl);
+
+            getRequest.onsuccess = () => {
+                const fileRecord = getRequest.result;
+
+                if (fileRecord && fileRecord.code) {
+                    // Convert the stored binary blob back into a usable URL source
+                    return URL.createObjectURL(fileRecord.code);
+
+                    console.log("Spritesheet texture mapping linked offline!");
+                }
+            };
+        }
+
         function loadScriptFromStorage(url, callback) {
             const transaction = gameStorageDB.transaction(["gameFiles"], "readonly");
             const store = transaction.objectStore("gameFiles");
@@ -769,8 +769,11 @@
                     // 2. Inject the code text
                     script.textContent = fileRecord.code;
 
+                    script.type = "module"
+
                     // 3. Append it to the head tag (old scripts remain untouched)
-                    document.head.appendChild(script);
+                    document.getElementById("gamecontainer").appendChild(script);
+                    
 
                     console.log(`Successfully appended new script element for: ${url}`);
                     if (typeof callback === "function") callback();
@@ -784,14 +787,18 @@
 
 
         for (let i = 0; i < window.gameurls.length; i++) {
-            console.log(window.gameurls[i] + " stage 1")
+            //console.log(window.gameurls[i] + " stage 1")
             await saveScriptToStorage(window.gameurls[i])
-            console.log(window.gameurls[i] + " stage 2")
+            //console.log(window.gameurls[i] + " stage 2")
             loadScriptFromStorage(window.gameurls[i])
-            console.log(window.gameurls[i] + " stage 3")
+            //console.log(window.gameurls[i] + " stage 3")
         }
 
     </script>
+
+    <div id="gamecontainer">
+
+    </div>
 
     <script id="pointercode">
 
@@ -1955,12 +1962,6 @@
                     }
                 }
 
-                /*
-                #############
-                #TYCOON CODE#
-                #############
-                */
-
                 window.gameTick(Currentgame, GameDataLoaded, dt, currentTime)
             }
             prevgame = Currentgame
@@ -2002,6 +2003,7 @@
                     let icox = 235
                     let icoy = 120
                     for (const [key, item] of Object.entries(games)) {
+                        
                         ctx.drawImage(item.icon, icox, icoy)
                         mouseHitbox(icox, icoy, 240, 240, key)
 
@@ -2009,7 +2011,7 @@
                         if (icox > 1680) {
                             icox = 235
                             icoy += 240
-                        } 
+                        }
                     }
                 } else if (menu == 1) {
                     // toggle background blur
