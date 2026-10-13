@@ -691,40 +691,40 @@
         dbRequest.onerror = () => console.error("Failed to open database.");
 
         window.saveImageToStorage = function (imageUrl) {
-    // Skip network request immediately if the browser is completely offline
-    if (navigator.onLine === false) {
-        console.warn("Browser is offline. Skipping asset download.");
-        return Promise.resolve(false);
-    }
+            // Skip network request immediately if the browser is completely offline
+            if (navigator.onLine === false) {
+                console.warn("Browser is offline. Skipping asset download.");
+                return Promise.resolve(false);
+            }
 
-    // Return the promise pipeline so you can track when the download completes
-    return fetch(imageUrl)
-        .then((response) => {
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return response.blob(); // Pass the raw binary image data to the next .then()
-        })
-        .then((imageBlob) => {
-            // Open a write transaction to IndexedDB
-            const transaction = gameStorageDB.transaction(["gameFiles"], "readwrite");
-            const store = transaction.objectStore("gameFiles");
-            
-            // Store the binary image blob directly into your data structure
-            store.put({ url: imageUrl, code: imageBlob, savedAt: Date.now() });
+            // Return the promise pipeline so you can track when the download completes
+            return fetch(imageUrl)
+                .then((response) => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.blob(); // Pass the raw binary image data to the next .then()
+                })
+                .then((imageBlob) => {
+                    // Open a write transaction to IndexedDB
+                    const transaction = gameStorageDB.transaction(["gameFiles"], "readwrite");
+                    const store = transaction.objectStore("gameFiles");
 
-            // Return a promise that resolves true once written to the hard drive
-            return new Promise((resolve) => {
-                transaction.oncomplete = () => {
-                    console.log(`Asset successfully cached offline: ${imageUrl}`);
-                    resolve(true);
-                };
-            });
-        })
-        .catch((error) => {
-            // Gracefully catch offline failures, CORS blocking, or disk space errors
-            console.error("Failed to store asset:", error);
-            return false;
-        });
-};
+                    // Store the binary image blob directly into your data structure
+                    store.put({ url: imageUrl, code: imageBlob, savedAt: Date.now() });
+
+                    // Return a promise that resolves true once written to the hard drive
+                    return new Promise((resolve) => {
+                        transaction.oncomplete = () => {
+                            console.log(`Asset successfully cached offline: ${imageUrl}`);
+                            resolve(true);
+                        };
+                    });
+                })
+                .catch((error) => {
+                    // Gracefully catch offline failures, CORS blocking, or disk space errors
+                    console.error("Failed to store asset:", error);
+                    return false;
+                });
+        };
 
 
         function saveScriptToStorage(url) {
@@ -812,12 +812,23 @@
 
 
         for (let i = 0; i < window.gameurls.length; i++) {
-            //console.log(window.gameurls[i] + " stage 1")
-            saveScriptToStorage(window.gameurls[i])
-            //console.log(window.gameurls[i] + " stage 2")
-            loadScriptFromStorage(window.gameurls[i])
-            //console.log(window.gameurls[i] + " stage 3")
+            const currentUrl = window.gameurls[i];
+
+            // 1. Trigger the download/update check
+            saveScriptToStorage(currentUrl).then((downloadSuccessful) => {
+                if (downloadSuccessful) {
+                    console.log(`Update checked/saved for: ${currentUrl}`);
+                } else {
+                    console.log(`Offline or failed to update. Loading last saved copy for: ${currentUrl}`);
+                }
+
+                // 2. This code runs ONLY after saveScriptToStorage completely finishes
+                loadScriptFromStorage(currentUrl, () => {
+                    console.log(`Engine loaded and parsed script into memory: ${currentUrl}`);
+                });
+            });
         }
+
 
     </script>
 
