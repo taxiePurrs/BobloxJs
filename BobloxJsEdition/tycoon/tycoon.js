@@ -429,5 +429,5 @@ window.watchForClassChange(myid, "remove", (element) => {
         __thisScriptNode.remove();
     }
     console.log(__thisScriptNode.outerHTML)
-    console.log("Tycoon memory space and DOM completely vaporized.");
+    console.error("Tycoon memory space and DOM completely vaporized.");
 });

@@ -18,9 +18,7 @@ Config saving and editor
 
 Finish the tycoon game
     Button positioning
-    Money collection
-    Head collisions
-
+    
 Escape menu
     Player List
 

@@ -232,6 +232,7 @@
         #repolist {
             overflow-y: auto;
             display: block;
+            overflow-x: none;
         }
 
         #templateRepo {
@@ -320,8 +321,9 @@
         </div>
         <div id="repos">
             <div id="RepoInput">
-                <input type="text" id="repoin" aria-multiline="false" placeholder="javascript src link, (jsDelivr is reccomended)"><input
-                     type="button" id="repoadd" value="Add" onclick="repoadd()">
+                <input type="text" id="repoin" aria-multiline="false"
+                    placeholder="javascript src link, (jsDelivr is reccomended)"><input type="button" id="repoadd"
+                    value="Add" onclick="repoadd()">
             </div>
             <div id="repolist">
                 <div id="templateRepo" class="activerepo"><a class="repoLink" target="_blank"></a><input type="button"
@@ -862,6 +864,11 @@
             console.log("trying to delete" + url)
             document.getElementById(url).className = "remove"
             document.getElementById("item." + url).remove()
+            const index = window.gameurls.indexOf(url);
+
+            if (index !== -1) {
+                window.gameurls.splice(index, 1); // Removes 1 item at the found index
+            }
             localStorage.setItem("gamelinks", JSON.stringify(window.gameurls));
         }
     </script>
