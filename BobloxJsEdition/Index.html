@@ -158,6 +158,7 @@
             max-height: 100vh;
             max-width: 177.78vh;
             /* 16/9 * 100 */
+            background-color: black;
         }
 
         #canvas:focus {
@@ -171,13 +172,132 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background-color: black;
             display: block;
+        }
+
+        #repos {
+            width: 50%;
+            height: 50%;
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #444;
+            display: none;
+            grid-template-rows: 10% 90%;
+        }
+
+        #RepoInput {
+            display: grid;
+            grid-template-columns: 85% 15%;
+            width: 100%;
+            height: 100%;
+        }
+
+        #repoin {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            box-sizing: border-box;
+            outline-style: none;
+            border-style: none;
+            background-color: #222;
+            color: #FFF;
+            height: 100%;
+            padding: 8px 8px;
+        }
+
+        #repoadd {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            transition: background-color 0.2s, color 0.2s, transform 0.2s;
+            outline-style: none;
+            border-style: none;
+            height: 100%;
+            padding: 0px;
+            color: #FFF;
+            background-color: #222;
+            justify-content: center;
+        }
+
+        #repoadd:hover {
+            transform: scale(1.08);
+            color: #000;
+            background-color: #77ff51;
+            cursor: var(--cursor2);
+        }
+
+        #repoadd:active {
+            transform: scale(0.92);
+        }
+
+
+        #repolist {
+            overflow-y: auto;
+            display: block;
+        }
+
+        #templateRepo {
+            display: none;
+        }
+
+        .activerepo {
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: 85% 15%;
+            width: 100%;
+            height: 11.111%;
+        }
+
+        .activerepo:nth-child(even) {
+            background-color: #2a2a2a;
+        }
+
+        .activerepo:nth-child(odd) {
+            background-color: #333333;
+        }
+
+        .reporemove {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            transition: background-color 0.2s, color 0.2s, transform 0.2s;
+            outline-style: none;
+            border-style: none;
+            height: 100%;
+            padding: 0px;
+            color: #FFF;
+            background-color: #222;
+            justify-content: center;
+            position: relative;
+        }
+
+        .reporemove:hover {
+            transform: scale(1.08);
+            color: #000;
+            background-color: #ff5151;
+            cursor: var(--cursor2);
+        }
+
+        .reporemove:active {
+            transform: scale(0.92);
+        }
+
+        .repoLink {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            text-decoration: underline;
+            /*box-sizing: border-box;*/
+            color: #FFF;
+            padding-left: 8px;
+            padding-top: auto;
+            padding-bottom: auto;
+            align-content: center;
+            height: 100%;
+            width: 100%;
+        }
+
+        a:hover {
+            cursor: var(--cursor2);
         }
     </style>
 </head>
 
-<body style="overflow-y: hidden; cursor: var(--cursor1);">
+<body style="overflow-y: hidden; cursor: var(--cursor1); background-color: black;">
     <div class="canvas" id="canvascontainer">
         <canvas class="canvas" id="canvas" width="1920" height="1080" tabindex="0">
         </canvas>
@@ -196,6 +316,16 @@
                 <div id="chatsendbtn" onclick="sendMessage()" class="br">
 
                 </div>
+            </div>
+        </div>
+        <div id="repos">
+            <div id="RepoInput">
+                <input type="text" id="repoin" aria-multiline="false" placeholder="javascript src link, (jsDelivr is reccomended)"><input
+                     type="button" id="repoadd" value="Add" onclick="repoadd()">
+            </div>
+            <div id="repolist">
+                <div id="templateRepo" class="activerepo"><a class="repoLink" target="_blank"></a><input type="button"
+                        class="reporemove" value="Remove"></div>
             </div>
         </div>
         <div id="DebugSide" style="
@@ -387,31 +517,28 @@
             Debug: true,            // Unused lol
             Name: "Guest",          // Preffered name
             BackgroundBlur: true,   // Toggle background blur
-            TycoonProgress: "0",    // Tycoon progress
-            TycoonMoney: 0,         // Tycoon money
-            TycoonPending: 0,       // Pending tycoon money
-            TycoonRebirths: 0,      // Tycoon rebirths
             Bobux: 0,               // Bobux
         };
 
-        console.warn(gameconfig)
+        window.loadData = function (obj) {
+            for (const key in obj) {
+                if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                    const rawValue = localStorage.getItem(key);
+                    if (rawValue !== null) {
+                        try {
+                            // Tries to parse booleans ("false"), numbers ("42"), or valid JSON strings ('"Guest"')
+                            obj[key] = JSON.parse(rawValue);
 
-        for (const key in window.gameconfig) {
-            if (Object.prototype.hasOwnProperty.call(window.gameconfig, key)) {
-                const rawValue = localStorage.getItem(key);
-
-                if (rawValue !== null) {
-                    try {
-                        // Tries to parse booleans ("false"), numbers ("42"), or valid JSON strings ('"Guest"')
-                        window.gameconfig[key] = JSON.parse(rawValue);
-
-                    } catch (error) {
-                        // If parsing fails (like on raw "Guest"), treat it as a normal string
-                        window.gameconfig[key] = rawValue;
+                        } catch (error) {
+                            // If parsing fails (like on raw "Guest"), treat it as a normal string
+                            obj[key] = rawValue;
+                        }
                     }
                 }
             }
         }
+
+        loadData(gameconfig)
 
         window.keysdown = new Set();
 
@@ -419,8 +546,13 @@
         window.addEventListener("keyup", (event) => window.keysdown.delete(event.key));
 
         window.saveConfigValue = function (key, value) { // Save a config key to localstorage for future loading
-            window.gameconfig[key] = value;
             localStorage.setItem(key, value);
+        }
+
+        window.saveTable = function (obj) {
+            for (const [key, item] of Object.entries(obj)) {
+                saveConfigValue(key, item)
+            }
         }
 
         window.clamp = function (value, min, max) { // Mimicks the python Math.clamp function
@@ -661,6 +793,77 @@
             str = "0".repeat(Math.max(bit - str.length + 1, 0)) + str // 0th index, 1 length, add 5, 5th index 6 length
             return str.split("").with(-(bit + 1), String(val)).join("");
         }
+
+        window.inRange = function (number, min, max) {
+            return (number === window.clamp(number, min, max))
+        }
+
+        window.ChangeBase = function (val, startbase, endbase) {
+            const decimal = parseInt(val, startbase)
+            return decimal.toString(endbase)
+        }
+
+        window.watchForClassChange = function (elementId, targetClass, callback, disconnectOnTrigger = false) {
+            const targetElement = document.getElementById(elementId);
+            if (!targetElement) return null;
+
+            // Track whether the class was already present in the previous check
+            let wasClassPresent = targetElement.classList.contains(targetClass);
+
+            const observerCallback = (mutationsList, observerInstance) => {
+                for (const mutation of mutationsList) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        // Use classList for cleaner and faster lookups
+                        const isClassPresent = targetElement.classList.contains(targetClass);
+
+                        // Only trigger if it wasn't there before, but is there now
+                        if (isClassPresent && !wasClassPresent) {
+                            callback(targetElement);
+
+                            if (disconnectOnTrigger) {
+                                observerInstance.disconnect();
+                                return; // Exit early since we are done listening
+                            }
+                        }
+
+                        // Update the state cache for the next mutation event
+                        wasClassPresent = isClassPresent;
+                    }
+                }
+            };
+
+            const observer = new MutationObserver(observerCallback);
+
+            observer.observe(targetElement, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+
+            return observer;
+        };
+
+
+        window.cloneWithEditableChildren = function (elementId) {
+            const original = document.getElementById(elementId);
+            if (!original) return [];
+
+            // 1. Perform a deep clone of the parent element and all descendants
+            const cloneParent = original.cloneNode(true);
+
+            // 2. Gather all child elements inside the clone into a flat, editable array
+            // We use the spread operator [...] to turn the NodeList into a true Array
+            const editableNodesList = [cloneParent, ...cloneParent.querySelectorAll("*")];
+
+            // 3. Return the array of live, unmounted element pointers
+            return editableNodesList;
+        };
+
+        window.DeleteGame = function (url) {
+            console.log("trying to delete" + url)
+            document.getElementById(url).className = "remove"
+            document.getElementById("item." + url).remove()
+            localStorage.setItem("gamelinks", JSON.stringify(window.gameurls));
+        }
     </script>
 
     <script id="initialize">
@@ -670,10 +873,11 @@
     </script>
 
     <script id="gameDB">
-        window.gameurls = [
+        const rawgameDB = localStorage.getItem("gamelinks")
+        window.gameurls = rawgameDB ? JSON.parse(rawgameDB) : [
             "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@main/BobloxJsEdition/tycoon/tycoon.js"
-            //"./tycoon.js"
-        ]
+            //"./tycoon.js" //this is commented in the commit, i just point to a local file for debugging
+        ];
 
         let gameStorageDB;
 
@@ -785,7 +989,6 @@
             };
         }
 
-
         function loadScriptFromStorage(url, callback) {
             const transaction = gameStorageDB.transaction(["gameFiles"], "readonly");
             const store = transaction.objectStore("gameFiles");
@@ -797,7 +1000,7 @@
                 if (fileRecord && fileRecord.code) {
                     // 1. Create a brand new script element every single time
                     const script = document.createElement("script");
-
+                    script.id = url
                     // 2. Inject the code text
                     script.textContent = fileRecord.code;
 
@@ -814,12 +1017,29 @@
 
             getRequest.onerror = () => console.error("Database reading error.");
         }
+        window.createRepoElement = function (url) {
+            const [row, text, btn] = window.cloneWithEditableChildren("templateRepo");
+            if (!row) return null;
+            row.id = "item." + url;
+            row.className = "activerepo";
+            if (text) {
+                text.textContent = url;
+                text.href = url;
+            }
+            if (btn) {
+                btn.onclick = function () {
+                    window.DeleteGame(url)
+                }
+            }
+            return row;
+        }
 
 
-        for (let i = 0; i < window.gameurls.length; i++) {
-            const currentUrl = window.gameurls[i];
+        window.loadgame = function (currentUrl) {
+            document.getElementById("repolist").appendChild(createRepoElement(currentUrl))
 
-            // Check if the current game link is a remote web URL
+            //rowContainer.style.display = "block"
+
             const isRemoteUrl = currentUrl.startsWith('http://') || currentUrl.startsWith('https://');
 
             if (isRemoteUrl) {
@@ -843,7 +1063,8 @@
 
                 // Dynamically create a standard HTML script element to inject the local file path directly
                 const script = document.createElement("script");
-                script.src = currentUrl;
+                script.id = currentUrl
+                script.src = currentUrl; //make this into the unpacked file instead of src
 
                 script.onload = () => {
                     console.log(`Engine loaded and parsed local path script into memory: ${currentUrl}`);
@@ -857,7 +1078,17 @@
             }
         }
 
+        for (let i = 0; i < window.gameurls.length; i++) {
+            loadgame(window.gameurls[i]);
+        }
 
+        function repoadd() {
+            let repoin = document.getElementById("repoin")
+            window.gameurls.push(repoin.value)
+            loadgame(repoin.value)
+            repoin.value = ""
+            localStorage.setItem("gamelinks", JSON.stringify(window.gameurls));
+        }
 
     </script>
 
@@ -873,6 +1104,9 @@
         }
         window.gameUI = function (name) {
             window[window.games[name].functionName + "UI"]()
+        }
+        window.gameLeave = function (name) {
+            window[window.games[name].functionName + "Leaving"]()
         }
     </script>
 
@@ -1469,7 +1703,7 @@
             return null;
         }
 
-        let PlrX = 960, PlrY = 540
+        var PlrX = 960, PlrY = 540
 
         function drawCharacter(X, Y, Scale, Data, Mirror) {
             // Offsets so the position is top-left of the character instead of the feet
@@ -1604,14 +1838,11 @@
                     menu = 1
                 } else if (MouseHover == "ToggleBlur") {
                     window.gameconfig.BackgroundBlur = !window.gameconfig.BackgroundBlur
-                    saveConfigValue("BackgroundBlur", window.gameconfig.BackgroundBlur)
                     someconfigsupdate()
                 } else if (MouseHover == "ToggleDebug") {
                     window.gameconfig.Debug = !window.gameconfig.Debug
-                    saveConfigValue("Debug", window.gameconfig.Debug)
                 } else if (MouseHover == "ToggleFPS") {
                     window.gameconfig.ShowFPS = !window.gameconfig.ShowFPS
-                    saveConfigValue("ShowFPS", window.gameconfig.ShowFPS)
                 } else if (games[MouseHover] !== undefined) {
                     Currentgame = MouseHover;
                 }
@@ -1673,6 +1904,8 @@
         let Size = 2.5
         let jumppower = 100
         let menu = 0
+        let repolist = document.getElementById("repos")
+        let repolistopen = false
 
         let lastNetworkTick = 0;
         const NETWORK_TICK_RATE = 50
@@ -1831,26 +2064,14 @@
 
         //save configs
         window.addEventListener("beforeunload", (event) => {
-            saveConfigValue("Name", window.gameconfig.Name)
-            saveConfigValue("TycoonProgress", window.gameconfig.TycoonProgress)
-            saveConfigValue("TycoonPending", window.gameconfig.TycoonPending)
-            saveConfigValue("TycoonMoney", window.gameconfig.TycoonMoney)
-            //saveConfigValue("TycoonProgress", "0")
+            if (currentgame) { gameLeave(currentgame) }
+            saveTable(gameconfig)
         });
 
         let chatmenudisplay = "none"
 
         let escapemenudisplay = "block"
         let escapemenu = document.getElementById("escapemenu")
-
-        function inRange(number, min, max) {
-            return (number === window.clamp(number, min, max))
-        }
-
-        function ChangeBase(val, startbase, endbase) {
-            const decimal = parseInt(val, startbase)
-            return decimal.toString(endbase)
-        }
 
         /*
         ###########
@@ -1886,6 +2107,10 @@
             //clear the canvas
             window.ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawRectangle(0, 0, canvas.width, canvas.height, "#111")
+
+            if (prevgame && Currentgame !== prevgame) {
+                gameLeave(prevgame)
+            }
 
             //handle Key inputs
             if (Currentgame == null) {
@@ -2065,12 +2290,16 @@
                 mouseHitbox(395, 40, 60, 60, "SettingsTab")
 
                 if (menu == 0) {
+                    if (repolistopen) {
+                        repolist.style.display = "none"
+                        repolistopen = false
+                    }
                     let icox = 235
                     let icoy = 120
                     for (const [key, item] of Object.entries(games)) {
                         //try {
-                            ctx.drawImage(item["icon"], icox, icoy)
-                            mouseHitbox(icox, icoy, 240, 240, key)
+                        ctx.drawImage(item["icon"], icox, icoy)
+                        mouseHitbox(icox, icoy, 240, 240, key)
                         /*} catch (error) {
                             continue
                         }*/
@@ -2082,6 +2311,10 @@
                         }
                     }
                 } else if (menu == 1) {
+                    if (!repolistopen) {
+                        repolist.style.display = "grid"
+                        repolistopen = true
+                    }
                     // toggle background blur
                     window.drawSpriteSheet(UISheet, 235, 120, 0, window.gameconfig.BackgroundBlur ? 60 : 30, 60, 30)
                     mouseHitbox(235, 120, 60, 30, "ToggleBlur")
@@ -2110,6 +2343,10 @@
                     escapemenu.style.display = escapemenudisplay = "none"
                 }
             } else {
+                if (repolistopen) {
+                    repolist.style.display = "none"
+                    repolistopen = false
+                }
                 if (GameDataLoaded) {
                     window.ctx.drawImage(GameDataLoaded.foreground, 0, 0)
                 }

@@ -1,5 +1,15 @@
+console.log("test")
+const __thisScriptNode = document.currentScript;
+console.log(__thisScriptNode)
+if (window.games && window.games["tycoon"]) {
+    if (__thisScriptNode) __thisScriptNode.remove();
+    throw new Error("Duplicate runtime detected");
+}
+
+const myid = __thisScriptNode.id || "./tycoon"
+
 //console.warn("test")
-const folderurl = "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs@latest/BobloxJsEdition/tycoon/";
+const folderurl = "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs/BobloxJsEdition/tycoon/";
 
 // 1. Declare variables globally so the engine can always see them
 var tycoonforeground;
@@ -191,14 +201,21 @@ let tycoonbuttons = [
 
 let tycoonblocks = []
 
+let savedata = {
+    TycoonProgress: "0",    // Tycoon progress
+    TycoonMoney: 0,         // Tycoon money
+    TycoonPending: 0,       // Pending tycoon money
+    TycoonRebirths: 0,      // Tycoon rebirths
+}
+
 function makeTycoonButton(id, bin) {
     const data = tycoonbuttons[id]
     drawRoundedRectangle(data.x, data.y, 120, 25, 5, "#e00")
     drawText(data.text, data.x + 60, data.y - 80, 30, "Arial", "#fff", "center")
     drawText(data.displayprice, data.x + 60, data.y - 50, 30, "Arial", "#fff", "center")
 
-    if (!window.readBit(bin, id) && window.gameconfig.TycoonMoney >= data.price && inRange(PlrX, data.x, data.x + 120) && inRange(PlrY, data.y, data.y + 30)) {
-        window.gameconfig.TycoonMoney -= data.price
+    if (!window.readBit(bin, id) && savedata.TycoonMoney >= data.price && inRange(PlrX, data.x, data.x + 120) && inRange(PlrY, data.y, data.y + 30)) {
+        savedata.TycoonMoney -= data.price
         return window.setBit(bin, id, "1")
     }
     return window.setBit(bin, id, "0")
@@ -206,8 +223,17 @@ function makeTycoonButton(id, bin) {
 
 let lastTycoonDrop = 0
 
+loadData(savedata)
+console.log(savedata)
+
 window.vanillatycoon = function (GameDataLoaded, dt, currentTime) {
-    let tycoondata = ChangeBase(window.gameconfig.TycoonProgress, 16, 2)
+    let tycoondata = ChangeBase(savedata.TycoonProgress, 16, 2);
+
+    // Checks if it's falsy OR if it's explicitly the string "NaN"
+    if (!tycoondata || tycoondata === "NaN") {
+        tycoondata = "0";
+    }
+
     GameDataLoaded.floors[1].enabled = window.readBit(tycoondata, 0)
 
     const seventhbit = window.readBit(tycoondata, 7)
@@ -219,13 +245,9 @@ window.vanillatycoon = function (GameDataLoaded, dt, currentTime) {
         GameDataLoaded.floors[i].enabled = seventhbit
     }
 
-    if (seventhbit) {
-        window.drawSpriteSheet(TycoonSpritesheet, 600, 596, 0, 322, 1320, 344) //floor
-    } else {
-        window.drawSpriteSheet(TycoonSpritesheet, 600, 918, 0, 644, 1320, 22) //floor
-    }
-
     if (window.readBit(tycoondata, 0)) {
+        const offs = seventhbit ? [596, 322, 344] : [918, 644, 22]
+        window.drawSpriteSheet(TycoonSpritesheet, 600, offs[0], 0, offs[1], 1320, offs[2])
         if (window.readBit(tycoondata, 1)) {
             if (dt < 250 && currentTime - lastTycoonDrop >= 1000 && window.readBit(tycoondata, 2)) {
                 lastTycoonDrop = currentTime
@@ -287,7 +309,7 @@ window.vanillatycoon = function (GameDataLoaded, dt, currentTime) {
                                 drawText(abbreviateToMoney(data.value), data.x + 20, data.y - 20, 40, "Arial", "#0d0", "center")
                                 drawRectangle(data.x, data.y, 40, 40, "#e00")
                             } else {
-                                window.gameconfig.TycoonPending += data.value
+                                savedata.TycoonPending += data.value
                                 tycoonblocks.splice(i, 1)
                                 i--
                             }
@@ -345,21 +367,24 @@ window.vanillatycoon = function (GameDataLoaded, dt, currentTime) {
         if (window.readBit(tycoondata, 2)) {
             window.drawSpriteSheet(TycoonSpritesheet, 1452, 679, 1052, 83 + tycoonoffset, 268, 239) // collector
             const onbtn = (inRange(PlrY, 896, 926) && inRange(PlrX, 1464, 1708));
-            window.gameconfig.TycoonMoney += onbtn ? window.gameconfig.TycoonPending : 0;
-            window.gameconfig.TycoonPending *= onbtn ? 0 : 1;
-            drawRectangle(1464, 885, 244, 21, (onbtn || window.gameconfig.TycoonPending == 0) ? "#d00" : "#0d0")
-            cachedCollectorSize = drawBoundedText(abbreviateToMoney(window.gameconfig.TycoonPending), 1586, 787, 196, 68, "Arial", "#ff0", "center", cachedCollectorSize) // text
+            savedata.TycoonMoney += onbtn ? savedata.TycoonPending : 0;
+            savedata.TycoonPending *= onbtn ? 0 : 1;
+            drawRectangle(1464, 885, 244, 21, (onbtn || savedata.TycoonPending == 0) ? "#d00" : "#0d0")
+            cachedCollectorSize = drawBoundedText(abbreviateToMoney(savedata.TycoonPending), 1586, 787, 196, 68, "Arial", "#ff0", "center", cachedCollectorSize) // text
         } else {
             tycoondata = makeTycoonButton(2, tycoondata)
         }
     } else {
         tycoondata = makeTycoonButton(0, tycoondata)
     }
-    window.gameconfig.TycoonProgress = ChangeBase(tycoondata, 2, 16)
+    //console.log(tycoondata)
+    savedata.TycoonProgress = ChangeBase(tycoondata, 2, 16)
+    //console.log(savedata.TycoonProgress)
 }
+
 window.vanillatycoonUI = function () {
     // draw the tycoon money hud
-    const abreviateMoney = abbreviateToMoney(window.gameconfig.TycoonMoney)
+    const abreviateMoney = abbreviateToMoney(savedata.TycoonMoney)
     const moneywidth = checkTextWidth(abreviateMoney, "Arial", 80)
     drawPolygon("#0009", "#000", 0,
         880 - moneywidth / 2, 1080,
@@ -369,3 +394,40 @@ window.vanillatycoonUI = function () {
     )
     drawText(abreviateMoney, 960, 1045, 80, "Arial", "#0d0", "center")
 }
+
+window.vanillatycoonLeaving = function() {
+    saveTable(savedata)
+}
+
+
+
+
+
+let removelist = [
+    "vanillatycoon",
+    "vanillatycoonUI",
+    "vanillatycoonLeaving",
+    "tycoonforeground",
+    "TycoonSpritesheet",
+    "tycoonICO",
+    "classicskybox"
+]
+
+window.watchForClassChange(myid, "remove", (element) => {
+    // 1. Flush the engine database registration
+    if (window.games) {
+        delete window.games["tycoon"];
+    }
+
+    for (let i = 0; i < removelist.length; i++) {
+        delete window[removelist[i]]
+    }
+
+    // 5. Physically remove the script node from the DOM tree
+    if (__thisScriptNode) {
+        __thisScriptNode.id = null
+        __thisScriptNode.remove();
+    }
+    console.log(__thisScriptNode.outerHTML)
+    console.log("Tycoon memory space and DOM completely vaporized.");
+});
