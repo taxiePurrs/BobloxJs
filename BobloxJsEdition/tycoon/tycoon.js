@@ -1,6 +1,4 @@
-console.log("test")
 const __thisScriptNode = document.currentScript;
-console.log(__thisScriptNode)
 if (window.games && window.games["tycoon"]) {
     if (__thisScriptNode) __thisScriptNode.remove();
     throw new Error("Duplicate runtime detected");
@@ -8,7 +6,6 @@ if (window.games && window.games["tycoon"]) {
 
 const myid = __thisScriptNode.id || "./tycoon"
 
-//console.warn("test")
 const folderurl = "https://cdn.jsdelivr.net/gh/taxiePurrs/BobloxJs/BobloxJsEdition/tycoon/";
 
 // 1. Declare variables globally so the engine can always see them
@@ -18,7 +15,7 @@ var tycoonICO;
 var classicskybox;
 
 function loadAndInitializeAssets(onCompleteCallback) {
-    console.log("Syncing tycoon visual assets...");
+    console.log("[TYCOON] Syncing image assets...");
 
     const fgUrl = folderurl + "TycoonForeground.png";
     const bgUrl = folderurl + "TycoonBuilding.png";
@@ -31,7 +28,7 @@ function loadAndInitializeAssets(onCompleteCallback) {
         saveImageToStorage(iconUrl),
         saveImageToStorage(skyUrl)
     ]).then(() => {
-        console.log("All image assets safely locked into storage database!");
+        console.log("[TYCOON] Image assets successfully stored");
 
         // Initialize fresh HTML Image contexts
         tycoonforeground = new Image();
@@ -46,7 +43,7 @@ function loadAndInitializeAssets(onCompleteCallback) {
         function checkProgress() {
             imagesLoaded++;
             if (imagesLoaded === totalImages) {
-                console.log("All image object blobs attached and rendered into RAM!");
+                console.log("[TYCOON] Image assets successfully loaded");
                 if (typeof onCompleteCallback === "function") onCompleteCallback();
             }
         }
@@ -224,7 +221,7 @@ function makeTycoonButton(id, bin) {
 let lastTycoonDrop = 0
 
 loadData(savedata)
-console.log(savedata)
+//console.log(savedata)
 
 window.vanillatycoon = function (GameDataLoaded, dt, currentTime) {
     let tycoondata = ChangeBase(savedata.TycoonProgress, 16, 2);
