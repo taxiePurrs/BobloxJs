@@ -1275,7 +1275,7 @@
 
         var PlrX = 960, PlrY = 540
 
-        function drawCharacter(X, Y, Scale, Data, Mirror) {
+        function drawCharacter(X, Y, Scale, Data, Mirror, cols) {
             // Offsets so the position is top-left of the character instead of the feet
             X -= 10 * Scale;
             Y -= 80 * Scale;
@@ -1290,7 +1290,7 @@
                 Scale * 20,
                 Scale * 40,
                 Data.LArm.rot * flipX,
-                DarkenHex(Mirror ? window.gameconfig.RArmCol : window.gameconfig.LArmCol)
+                DarkenHex(Mirror ? cols["rarm"] : cols["larm"])
             );
             // Left leg
             drawRotatedRectangle(
@@ -1299,7 +1299,7 @@
                 Scale * 20,
                 Scale * 40,
                 Data.LLeg.rot * flipX,
-                DarkenHex(Mirror ? window.gameconfig.RLegCol : window.gameconfig.LLegCol)
+                DarkenHex(Mirror ? cols["rleg"] : cols["lleg"])
             );
 
             // Head
@@ -1310,7 +1310,7 @@
                 Scale * 20,
                 Scale * 5,
                 Data.Head.rot * flipX,
-                window.gameconfig.HeadCol
+                cols["head"]
             );
 
             //face
@@ -1344,7 +1344,7 @@
                 Scale * 20,
                 Scale * 40,
                 Data.RLeg.rot * flipX,
-                Mirror ? window.gameconfig.LLegCol : window.gameconfig.RLegCol
+                Mirror ? cols["lleg"] : cols["rleg"]
             );
 
             // Torso
@@ -1354,7 +1354,7 @@
                 Scale * 20,
                 Scale * 40,
                 Data.Torso.rot * flipX,
-                window.gameconfig.TorsoCol
+                cols["torso"]
             );
 
             // Right arm
@@ -1364,7 +1364,7 @@
                 Scale * 20,
                 Scale * 40,
                 Data.RArm.rot * flipX,
-                Mirror ? window.gameconfig.LArmCol : window.gameconfig.RArmCol
+                Mirror ? cols["larm"] : cols["rarm"]
             );
         }
 
@@ -1676,7 +1676,15 @@
                 m: facingleft,                  // Avatar should be mirrored on render
                 n: window.gameconfig.Name,      // Preffered name
                 time: Date.now(),               // current time, used for ping calculation
-                state: safeFramePacket          // Animation data
+                state: safeFramePacket,         // Animation data
+                cols: {
+                    "head" : gameconfig.HeadCol,
+                    "torso" : gameconfig.TorsoCol,
+                    "larm" : gameconfig.LArmCol,
+                    "rarm" : gameconfig.RArmCol,
+                    "lleg" : gameconfig.RArmCol,
+                    "rleg" : gameconfig.RLegCol
+                }
             });
         }
 
@@ -1859,13 +1867,27 @@
                 if (p.g == Currentgame) {
                     let renderX = p.x + p.sx - Scrollx; // Subtracting the local camera scroll value positions
                     let renderY = p.y;
-                    drawCharacter(renderX, renderY, p.s, p.state, p.m)
+                    drawCharacter(renderX, renderY, p.s, p.state, p.m, p.cols)
                 }
             }
 
 
             //Draw the character
-            drawCharacter(PlrX, PlrY, Size, getAnimationFrame(), facingleft)
+            drawCharacter(
+                PlrX,
+                PlrY,
+                Size,
+                getAnimationFrame(),
+                facingleft,
+                {
+                    "head" : gameconfig.HeadCol,
+                    "torso" : gameconfig.TorsoCol,
+                    "larm" : gameconfig.LArmCol,
+                    "rarm" : gameconfig.RArmCol,
+                    "lleg" : gameconfig.RArmCol,
+                    "rleg" : gameconfig.RLegCol
+                }
+            )
 
 
             if (Currentgame == null) {
