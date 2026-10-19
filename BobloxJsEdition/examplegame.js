@@ -1,18 +1,7 @@
 /**
  * main game tick - {@link gametick}
+ * metadata - {@link window.games[namespace]}
 */
-
-/**
- * For implementation details, see {@link calculateTotal}
- */
-
-function processInvoice() {
-    // ...
-}
-
-function calculateTotal() {
-    // Clicking "calculateTotal" above will jump directly here
-}
 
 const namespace = "examplegame" // game namespace, this will be the name and internal refrence for your game
 
@@ -27,6 +16,9 @@ const myid = __thisScriptNode.id || `./${namespace}.js` // changing the fallback
 //#endregion
 
 //#region metadata
+/**
+ * @memberof window.games
+ */
 //this is the game data and collision geometry
 window.games[namespace] = {
     // metadata
