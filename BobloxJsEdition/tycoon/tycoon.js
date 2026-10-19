@@ -64,8 +64,6 @@ function loadAndInitializeAssets(onCompleteCallback) {
 
 // 2. Safely initialize the game metadata map profile ONLY after resources are mapped
 loadAndInitializeAssets(() => {
-    window.games = window.games || {};
-    
     window.games["tycoon"] = {
         functionName: "vanillatycoon",
         width: 1920,
@@ -223,7 +221,8 @@ let lastTycoonDrop = 0
 loadData(savedata)
 //console.log(savedata)
 
-window.vanillatycoon = function (GameDataLoaded, dt, currentTime) {
+window.vanillatycoon = function (dt, currentTime) {
+    let GameDataLoaded = games["tycoon"]
     let tycoondata = ChangeBase(savedata.TycoonProgress, 16, 2);
 
     // Checks if it's falsy OR if it's explicitly the string "NaN"
